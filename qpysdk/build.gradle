@@ -39,7 +39,7 @@ android {
 dependencies {
 //    api fileTree(dir: 'libs', include: ['*.jar'])
 //    api files('libs/locale_platform.jar')
-    api rootProject.ext.libGoogleGuava
+    api 'com.google.guava:guava:23.0'
     api project(':qbaselib')
     api project(':qpysl4a')
 }
