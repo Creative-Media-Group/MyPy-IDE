@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- The Material Design theme. This theme is only used for API level 21...
+ -->
+
+<resources>
+
+    <style name="TransparentTheme" parent="@style/Theme.AppCompat">
+
+        <item name="android:background">@android:color/transparent</item>
+        <item name="background">@android:color/transparent</item>
+
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:color/transparent</item>
+    </style>
+
+    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">#FF9B9B9B</item>
+        <item name="colorControlNormal">@color/white</item>
+        <item name="android:dialogPreferenceStyle">@style/MyDialog</item>
+        <item name="android:windowBackground">@color/colorPrimaryDark</item>
+        <item name="android:windowContentTransitions">true</item>
+        <item name="selectableItemBackground">@drawable/toolbar_button_bg</item>
+        <item name="android:textAppearanceSmallPopupMenu">@style/popupMenuTextAppearanceSmall</item>
+        <item name="android:textAppearanceLargePopupMenu">@style/popupMenuTextAppearanceLarge</item>
+        <item name="android:colorBackground">@color/colorPrimaryDark</item>
+    </style>
+    <!-- This style is used for all activities.
+     -->
+    <style name="ConsoleTheme" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <!-- Main theme colors -->
+        <!--   your app branding color for the app bar -->
+        <item name="android:colorPrimary">@color/colorPrimary</item>
+        <!--   darker variant for the status bar and contextual app bars -->
+        <item name="android:colorPrimaryDark">@color/colorPrimaryDark</item>
+        <!--   theme UI controls like checkboxes and text fields -->
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+
+</resources>
+

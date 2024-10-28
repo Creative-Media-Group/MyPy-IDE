@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#FF4A4A4A</color>
+    <color name="colorPrimaryDark">#FF363636</color>
+    <color name="colorAccent">#FF4BAC07</color>
+    <color name="theme_yellow">#ECCD00</color>
+    <color name="theme_bg">#FF4A4A4A</color>
+    <color name="theme_gray">#c5c5c5</color>
+    <!--<color name="white">#ffffff</color>-->
+
+    <color name="error">#D2483D</color>
+    <color name="Color_White">#FFF</color>
+    <color name="ripple_normal">#CACCCB</color>
+    <color name="text_dark">#333333</color>
+
+
+    <color name="ripple_material_light">#40000000</color>
+
+    <color name="topbar">#1f1f1f</color>
+    <color name="divide_line">#FFE4E4E4</color>
+    <color name="link">#FF0066CC</color>
+    <!--<color name="divider">#fef8ec</color>-->
+
+    <color name="cmain3">#c8c800</color>
+
+    <color name="cmain8">#2eb3e4</color>
+
+    <color name="cwhite">#ffffff</color>
+    <color name="cwhite3">#fbfbfb</color>
+
+    <color name="cgrey6">#e8e8e8</color>
+    \
+
+    <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
+</resources>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <ScrollView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimaryDark"
+            android:orientation="vertical">
+
+            <include
+                layout="@layout/layout_toolbar"/>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="40dp"
+                android:src="@drawable/img_home_logo"/>
+
+            <TextView
+                android:id="@+id/version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="30dp"
+                android:textColor="#FFF"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="30dp"
+                android:background="@drawable/white_rect_stroke"
+                android:padding="@dimen/default_margin"
+                android:text="@string/qpy_description"
+                android:textColor="#FFF"
+                android:textSize="18sp"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/toolbar"/>
+
+            <TextView
+                android:id="@+id/tv_privacy"
+                style="@style/setting_tv"
+                android:text="@string/privacy_title"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/toolbar"/>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tv_update"
+                    style="@style/setting_tv"
+                    android:text="@string/check_update"/>
+
+                <TextView
+                    android:id="@+id/tv_new_hint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="60dp"
+                    android:gravity="center_vertical"
+                    android:text="@string/already_newest"
+                    android:textColor="@color/text_color_hint"/>
+            </RelativeLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/toolbar"/>
+
+            <TextView
+                android:id="@+id/tv_star"
+                style="@style/setting_tv"
+                android:text="@string/star_it"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/toolbar"/>
+
+            <TextView
+                android:id="@+id/tv_feedback"
+                style="@style/setting_tv"
+                android:text="@string/feedback"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/toolbar"/>
+
+            <TextView
+                android:id="@+id/tv_thanks"
+                style="@style/setting_tv"
+                android:text="@string/thank"/>
+        </LinearLayout>
+    </ScrollView>
+</layout>
