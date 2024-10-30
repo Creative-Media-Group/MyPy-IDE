@@ -32,7 +32,7 @@ buildscript {
 
         // Realm is a mobile database: a replacement for SQLite & ORMs
         // https://github.com/realm/realm-java
-        classpath "io.realm:realm-gradle-plugin:3.5.0"
+        classpath "io.realm:realm-gradle-plugin:10.18.0"
 
         classpath 'com.google.gms:google-services:4.0.2'
     }
@@ -42,7 +42,6 @@ allprojects {
     repositories {
         jcenter()
         google()
-
         mavenCentral()
         maven { url "https://jitpack.io" }
         maven { url 'https://dl.bintray.com/azeesoft/maven' }
