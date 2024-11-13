@@ -159,6 +159,12 @@
             android:summary="@string/summary_shell_preference"
             android:dialogTitle="@string/dialog_title_shell_preference" />
         <EditTextPreference
+            android:key="shell_interface"
+            android:defaultValue="@string/pref_shell_interface_default"
+            android:title="@string/title_shell_interface_preference"
+            android:summary="@string/summary_shell_interface_preference"
+            android:dialogTitle="@string/dialog_title_shell_preference" />
+        <EditTextPreference
             android:key="initialcommand"
             android:defaultValue="@string/pref_initialcommand_default"
             android:title="@string/title_initialcommand_preference"

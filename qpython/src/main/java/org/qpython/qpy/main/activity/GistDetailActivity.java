@@ -148,7 +148,7 @@ public class GistDetailActivity extends BaseActivity implements DetailView {
                     break;
                 }
                 case ShareDialog.COPY_LINK: {
-                    OpenWebUtil.open(this, "http://gist.qpy.io/share/"+getIntent().getStringExtra(GIST_ID));
+                    OpenWebUtil.open(this, "http://gist.qpython.org/share/"+getIntent().getStringExtra(GIST_ID));
                     break;
                 }
             }
@@ -171,7 +171,7 @@ public class GistDetailActivity extends BaseActivity implements DetailView {
 //        setTitle(title);
     }
 
-    @Subscribe
+    /*@Subscribe
     public void onEvent(GistEvent event) {
         switch (event.name) {
             case FORK:
@@ -220,7 +220,7 @@ public class GistDetailActivity extends BaseActivity implements DetailView {
 
         }
 
-    }
+    }*/
 
     /**
      * 发送评论

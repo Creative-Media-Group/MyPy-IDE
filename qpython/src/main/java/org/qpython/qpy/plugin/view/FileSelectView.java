@@ -1,12 +1,13 @@
 package org.qpython.qpy.plugin.view;
 
 import android.content.Context;
-import android.os.Environment;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
+
+import com.quseit.util.FileUtils;
 
 import org.qpython.qpy.R;
 
@@ -24,7 +25,7 @@ public class FileSelectView extends ListView implements AdapterView.OnItemClickL
     public final static String TAG = "FileSelectView";
     public static final String ON_ERROR_MSG = "No rights to access!";
 
-    private static final String sRoot = Environment.getExternalStorageDirectory().getAbsolutePath();
+    private static final String sRoot = FileUtils.getQyPath();
     public static final String PARENT_DIR = "..";
     public static final String FOLDER = ".";
     public static final String EMPTY = "";

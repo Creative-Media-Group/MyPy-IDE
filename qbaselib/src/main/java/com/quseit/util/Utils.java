@@ -192,13 +192,13 @@ public class Utils {
         try {
     		if(Environment.getExternalStorageState().equalsIgnoreCase("mounted")) {
 //    		    File file = new File(Environment.getExternalStorageDirectory(), path);
-    		    File file = new File(FileUtils.getQyPath(context), path);
+    		    File file = new File(FileUtils.getQyPath(), path);
     		    if (!file.exists()) {
     		    	try {
     		    		file.mkdirs();
 
 //    		    		Log.d(TAG, "createDirectoryOnExternalStorage created " + Environment.getExternalStorageDirectory().getAbsolutePath() + "/" +path);
-    		    		Log.d(TAG, "createDirectoryOnExternalStorage created " + FileUtils.getQyPath(context) + "/" +path);
+    		    		Log.d(TAG, "createDirectoryOnExternalStorage created " + FileUtils.getQyPath() + "/" +path);
     				} catch (Exception e) {
     		            Log.e(TAG,"createDirectoryOnExternalStorage error: ", e);
     				}
@@ -251,7 +251,7 @@ public class Utils {
 		if (hasSdcard()) {
 			// SD卡路径
 //			filePath = Environment.getExternalStorageDirectory()
-			filePath = FileUtils.getQyPath(context)
+			filePath = FileUtils.getQyPath()
 					+ File.separator + dirName;
 		} else {
 			filePath = context.getCacheDir().getPath() + File.separator

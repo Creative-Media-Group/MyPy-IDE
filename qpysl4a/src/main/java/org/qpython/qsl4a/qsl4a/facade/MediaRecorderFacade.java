@@ -27,7 +27,7 @@ import android.view.SurfaceView;
 import android.view.WindowManager;
 
 import org.qpython.qsl4a.QSL4APP;
-import org.qpython.qsl4a.qsl4a.FutureActivityTaskExecutor;
+import org.qpython.qsl4a.qsl4a.future.FutureActivityTaskExecutor;
 import org.qpython.qsl4a.qsl4a.LogUtil;
 
 
@@ -70,8 +70,8 @@ public class MediaRecorderFacade extends RpcReceiver {
 
   @Rpc(description = "Records audio from the microphone and saves it to the given location.")
   public void recorderStartMicrophone(@RpcParameter(name = "targetPath") String targetPath)
-      throws IOException {
-    startAudioRecording(targetPath, MediaRecorder.AudioSource.MIC);
+      throws Exception {
+    startAudioRecording(targetPath);
   }
 
   @Rpc(description = "Records video from the camera and saves it to the given location. "
@@ -126,7 +126,7 @@ public class MediaRecorderFacade extends RpcReceiver {
       break;
     }
 
-    mMediaRecorder.setAudioSource(audioSource);
+    setAudioSource(audioSource);
     String extension = file.toString().split("\\.")[1];
     if (extension.equals("mp4")) {
       mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -181,7 +181,7 @@ public class MediaRecorderFacade extends RpcReceiver {
       } catch (Exception e) {
         LogUtil.e(e);
       }
-      mMediaRecorder.setAudioSource(audioSource);
+      setAudioSource(audioSource);
       mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
       mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
     } else {
@@ -200,13 +200,25 @@ public class MediaRecorderFacade extends RpcReceiver {
     prepTask.finish();
   }
 
-  private void startAudioRecording(String targetPath, int source) throws IOException {
-    mMediaRecorder.setAudioSource(source);
+  private void startAudioRecording(String targetPath) throws Exception {
+    setAudioSource();
     mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
     mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
     mMediaRecorder.setOutputFile(targetPath);
     mMediaRecorder.prepare();
     mMediaRecorder.start();
+  }
+
+  private void setAudioSource() throws Exception {
+    setAudioSource(MediaRecorder.AudioSource.MIC);
+  }
+
+  private void setAudioSource(int source) throws Exception {
+    try {
+      mMediaRecorder.setAudioSource(source);
+    } catch(Exception e){
+      throw new Exception("Please check Microphone Permission .\n"+e);
+    }
   }
 
   @Rpc(description = "Stops a previously started recording.")

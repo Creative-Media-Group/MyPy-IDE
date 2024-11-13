@@ -33,6 +33,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
     private Context mContext;
     private Thread.UncaughtExceptionHandler mDefaultHandler;
 	private Map<String, String> infos = new HashMap<String, String>();
+	public static String errlog;
 
     public static CrashHandler getInstance() {
         if (INSTANCE == null) {
@@ -48,7 +49,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
     	if (!NAction.getExtP(context, "conf_enable_crash_log").equals("0")) {
 	    	AppLog appDB = new AppLog(context);
 
-	    	String ver = String.valueOf(NUtil.getVersinoCode(context));
+	    	String ver = String.valueOf(NUtil.getVersionCode(context));
 	    	if (!appDB.ifLogExists(ver, data)) {
 	    		Log.d(TAG, "WriteSettings no exits:"+data);
 	    		appDB.insertNewLog(name, ver, NAction.getUserNoId(context), data);
@@ -57,10 +58,12 @@ public class CrashHandler implements UncaughtExceptionHandler {
 	    	}
 
 //	    	File log = new File(Environment.getExternalStorageDirectory()+"/"+NAction.getCode(context)+"_last_err.log");
-	    	File log = new File(FileUtils.getQyPath(context) +"/"+NAction.getCode(context)+"_last_err.log");
-	    	if (log.exists()) {
-	    		log.delete();
-	    	}
+			File log = new File(errlog);
+			if (!log.getAbsoluteFile().getParentFile().exists()) {
+				log.getAbsoluteFile().getParentFile().mkdirs();
+			} else if (log.exists()) {    // clear log
+				log.delete();
+			}
 			byte[] datas = data.getBytes();
 			FileOutputStream outStream;
 			try {
@@ -114,10 +117,11 @@ public class CrashHandler implements UncaughtExceptionHandler {
                 @Override
                 public void run() {
                 	try {
-                        Looper.prepare();
-//            			Toast.makeText(mContext, MessageFormat.format(mContext.getString(R.string.err_caught), Environment.getExternalStorageDirectory()+"/"+NAction.getCode(mContext)+"_last_err.log"), Toast.LENGTH_LONG).show();
-            			Toast.makeText(mContext, MessageFormat.format(mContext.getString(R.string.err_caught), mContext.getApplicationContext().getExternalFilesDir(null).getAbsolutePath() +"/"+ NAction.getCode(mContext)+"_last_err.log"), Toast.LENGTH_LONG).show();
-                        Looper.loop();
+						Looper.prepare();
+						Toast.makeText(mContext, MessageFormat.format(mContext.getString(R.string.err_caught),
+								//Environment.getExternalStorageDirectory()+"/"+NAction.getCode(mContext)+"_last_err.log"
+								errlog), Toast.LENGTH_LONG).show();
+						Looper.loop();
                 	} catch (InflateException e) {
 						Log.e(TAG, "error : ", e);
                 	}
@@ -224,5 +228,6 @@ public class CrashHandler implements UncaughtExceptionHandler {
         mContext = ctx;
         mDefaultHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler(this);
+		errlog = ctx.getExternalFilesDir("log")+"/qpython_last_error.log";
     }
 }  

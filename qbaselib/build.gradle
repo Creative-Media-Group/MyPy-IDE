@@ -1,8 +1,8 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion compileSdkVersion
-    buildToolsVersion buildToolsVersion
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
@@ -22,30 +22,24 @@ android {
         }
     }
     repositories {
-        flatDir {
+        /*flatDir {
             dirs 'libs'
-        }
+        }*/
     }
 
     useLibrary 'org.apache.http.legacy'
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-    ndkVersion '25.1.8937393'
 }
 
 dependencies {
-    api 'org.apache.httpcomponents:httpcore:4.4.16'
-    api 'org.greenrobot:eventbus:3.3.1'
+    api 'org.apache.httpcomponents:httpcore:4.4.2'
+    api 'org.greenrobot:eventbus:3.0.0'
     //compile 'com.loopj.android:android-async-http:1.4.8'
 
     api project(':qftplib')
-    api files('libs/android-async-http-1.4.8.aar')
-    //api 'com.loopj.android:android-async-http:1.4.8'
+    api 'com.loopj.android:android-async-http:1.4.8'
 
-    debugApi 'com.squareup.leakcanary:leakcanary-android:2.14'
-    releaseApi 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.3'
+    debugApi rootProject.ext.leakcanaryDebug
+    releaseApi rootProject.ext.leakcanaryRelease
     api rootProject.ext.libSupportCardView
     api rootProject.ext.libSupportV4
     api rootProject.ext.libSupportV4Design

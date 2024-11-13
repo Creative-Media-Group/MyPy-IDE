@@ -16,17 +16,6 @@
 
 package jackpal.androidterm.emulatorview;
 
-import jackpal.androidterm.emulatorview.compat.ClipboardManagerCompat;
-import jackpal.androidterm.emulatorview.compat.ClipboardManagerCompatFactory;
-import jackpal.androidterm.emulatorview.compat.KeycodeConstants;
-import jackpal.androidterm.emulatorview.compat.Patterns;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.List;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -55,11 +44,17 @@ import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.widget.Scroller;
 
-import static android.view.inputmethod.EditorInfo.IME_ACTION_DONE;
-import static android.view.inputmethod.EditorInfo.IME_ACTION_NEXT;
-import static android.view.inputmethod.EditorInfo.IME_ACTION_NONE;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.LinkedList;
+
+import jackpal.androidterm.emulatorview.compat.ClipboardManagerCompat;
+import jackpal.androidterm.emulatorview.compat.ClipboardManagerCompatFactory;
+import jackpal.androidterm.emulatorview.compat.KeycodeConstants;
+import jackpal.androidterm.emulatorview.compat.Patterns;
+
 import static android.view.inputmethod.EditorInfo.IME_ACTION_UNSPECIFIED;
-import static android.view.inputmethod.EditorInfo.IME_MASK_ACTION;
 
 /**
  * A view on a {@link TermSession}.  Displays the terminal emulator's screen,
@@ -299,7 +294,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
          * XXX: The fact that the array returned from getScriptLine() on a
          * basic line contains no garbage is an implementation detail -- the
          * documented behavior explicitly allows garbage at the end! */
-        int lineLen;
+        int lineLen = 0;
         boolean textIsBasic = transcriptScreen.isBasicLine(row);
         if (textIsBasic) {
             lineLen = line.length;
@@ -357,8 +352,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
             }
 
             //For each URL:
-            for (int urlNum = 0; urlNum < urls.length; ++urlNum) {
-                URLSpan url = urls[urlNum];
+            for (URLSpan url : urls) {
                 int spanStart = textToLinkify.getSpanStart(url);
                 int spanEnd = textToLinkify.getSpanEnd(url);
 
@@ -416,8 +410,16 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
                 for (int i = startRow; i <= endRow; ++i) {
                     int runStart = (i == startRow) ? startCol : 0;
                     int runEnd = (i == endRow) ? endCol : mColumns - 1;
-
-                    Arrays.fill(linkRows[i], runStart, runEnd + 1, url);
+                    try {
+                        Arrays.fill(linkRows[i], runStart, runEnd + 1, url);
+                    } catch (ArrayIndexOutOfBoundsException e){
+                        URLSpan[][] newLinkRow = new URLSpan[lineCount+1][];
+                        System.arraycopy(linkRows, 0, newLinkRow, 0, lineCount);
+                        linkRows=newLinkRow;
+                        linkRows[i] = new URLSpan[columns];
+                        Arrays.fill(linkRows[i], runStart, runEnd + 1, url);
+                        lineCount++;
+                    }
                 }
             }
 
@@ -657,7 +659,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
             private int mSelectedTextEnd;
 
             private void sendText(CharSequence text) {
-                Log.d(TAG, "sendText:"+text);
+                //writeToFile("sendText",text.toString());
                 int n = text.length();
                 char c;
                 try {
@@ -1347,7 +1349,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
         } else if (handleFnKey(keyCode, true)) {
             return true;
         } else if (isSystemKey(keyCode, event)) {
-            if (!isInterceptedSystemKey(keyCode)) {
+            if (allowSystemKey(keyCode)) {
                 // Don't intercept the system keys
                 return super.onKeyDown(keyCode, event);
             }
@@ -1377,8 +1379,8 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
     /**
      * Do we want to intercept this system key?
      */
-    private boolean isInterceptedSystemKey(int keyCode) {
-        return keyCode == KeyEvent.KEYCODE_BACK && mBackKeySendsCharacter;
+    private boolean allowSystemKey(int keyCode) {
+        return keyCode != KeyEvent.KEYCODE_BACK || !mBackKeySendsCharacter;
     }
 
     /**
@@ -1399,7 +1401,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
             return true;
         } else if (isSystemKey(keyCode, event)) {
             // Don't intercept the system keys
-            if (!isInterceptedSystemKey(keyCode)) {
+            if (allowSystemKey(keyCode)) {
                 return super.onKeyUp(keyCode, event);
             }
         }
@@ -1643,10 +1645,10 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
         mTopRow = 0;
         if (mVisibleColumns > 0) {
             int cx = mEmulator.getCursorCol();
-            int visibleCursorX = mEmulator.getCursorCol() - mLeftColumn;
+            int visibleCursorX = cx - mLeftColumn;
             if (visibleCursorX < 0) {
                 mLeftColumn = cx;
-            } else if (visibleCursorX >= mVisibleColumns) {
+            } else if (visibleCursorX > mVisibleColumns) {
                 mLeftColumn = (cx - mVisibleColumns) + 1;
             }
         }

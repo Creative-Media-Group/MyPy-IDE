@@ -624,7 +624,7 @@ public class NUtil {
      * @param context
      * @return
      */
-    public static int getVersinoCode(Context context){
+    public static int getVersionCode(Context context){
         int intVersioinCode=0;
         try {
             PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
@@ -902,7 +902,7 @@ public class NUtil {
 	        	alarms.set(alarmType, timeOrLengthofWait, gpsIntent);*/
 
 
-	        	PendingIntent.getBroadcast(context, 0, gpsIntent, 0).send();
+	        	PendingIntent.getBroadcast(context, 0, gpsIntent, PendingIntent.FLAG_IMMUTABLE).send();
 	        	
 	        } catch (CanceledException e) {
 	    		Log.d(TAG, "openGPS exception:"+e.getMessage());

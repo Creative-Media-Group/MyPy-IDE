@@ -17,17 +17,15 @@
 package org.qpython.qsl4a.qsl4a.facade.ui;
 
 import android.app.Activity;
-//import android.support.v7.app.AlertDialog;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.util.AndroidRuntimeException;
 import android.widget.SeekBar;
 
-import org.qpython.qsl4a.qsl4a.LogUtil;
-import org.qpython.qsl4a.qsl4a.facade.EventFacade;
-
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.qpython.qsl4a.qsl4a.LogUtil;
+import org.qpython.qsl4a.qsl4a.facade.EventFacade;
 
 /**
  * Wrapper class for dialog box with seek bar.

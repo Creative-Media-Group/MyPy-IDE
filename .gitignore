@@ -10,10 +10,6 @@ local.properties
 qbaselib.iml
 .*
 !/.gitignore
-gradle-wrapper.properties
-Android.mk
-qpython/src/main/jni/python/libpython2.7.b
-qpysdk/src/main/obj
 values-fr
 values-tr
 build.gradle.new
@@ -27,3 +23,7 @@ qpython/google
 qpython/os
 qpython/ol
 qpython/op
+qpysl4a
+qbaselib
+qftplib
+qpysdk\src\main\jni

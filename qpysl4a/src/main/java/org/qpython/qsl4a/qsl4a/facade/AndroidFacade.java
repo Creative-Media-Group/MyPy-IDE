@@ -17,14 +17,13 @@
 package org.qpython.qsl4a.qsl4a.facade;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -33,27 +32,28 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.os.StatFs;
 import android.os.Vibrator;
 import android.text.ClipboardManager;
-import android.text.InputType;
-import android.text.method.PasswordTransformationMethod;
-import android.widget.EditText;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.qpython.qsl4a.QSL4APP;
-import org.qpython.qsl4a.qsl4a.FileUtils;
-import org.qpython.qsl4a.qsl4a.FutureActivityTaskExecutor;
+import org.qpython.qsl4a.qsl4a.util.FileUtils;
+import org.qpython.qsl4a.qsl4a.future.FutureActivityTaskExecutor;
 import org.qpython.qsl4a.qsl4a.LogUtil;
 import org.qpython.qsl4a.qsl4a.NotificationIdFactory;
 import org.qpython.qsl4a.qsl4a.future.FutureActivityTask;
 import org.qpython.qsl4a.qsl4a.jsonrpc.RpcReceiver;
 import org.qpython.qsl4a.qsl4a.rpc.Rpc;
 import org.qpython.qsl4a.qsl4a.rpc.RpcDefault;
-import org.qpython.qsl4a.qsl4a.rpc.RpcDeprecated;
 import org.qpython.qsl4a.qsl4a.rpc.RpcOptional;
 import org.qpython.qsl4a.qsl4a.rpc.RpcParameter;
-
+import org.qpython.qsl4a.qsl4a.util.HtmlUtil;
+import org.qpython.qsl4a.qsl4a.util.SPFUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -61,11 +61,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.qpython.qsl4a.qsl4a.util.SPFUtils;
 
 /**
  * Some general purpose Android routines.<br>
@@ -94,8 +89,8 @@ public class AndroidFacade extends RpcReceiver {
     int getLogo48();
   }
 
-  private final Service mService;
-  private final Handler mHandler;
+  public final Service mService;
+  public final Handler mHandler;
   private final Intent mIntent;
   private final FutureActivityTaskExecutor mTaskQueue;
 
@@ -104,6 +99,12 @@ public class AndroidFacade extends RpcReceiver {
 
   private final Resources mResources;
   private ClipboardManager mClipboard = null;
+  public final Context context;
+  public final String qpyProvider;
+
+  public static Handler handler;
+
+  private final int intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION  | Intent.FLAG_GRANT_WRITE_URI_PERMISSION ;
 
   @Override
   public void shutdown() {
@@ -125,11 +126,13 @@ public class AndroidFacade extends RpcReceiver {
     mNotificationManager =
             (NotificationManager) mService.getSystemService(Context.NOTIFICATION_SERVICE);
     mResources = manager.getAndroidFacadeResources();
-
+    //乘着船 修改
+    context = mService.getApplicationContext();
+    qpyProvider = context.getPackageName() + ".provider";
   }
 
   ClipboardManager getClipboardManager() {
-    Object clipboard = null;
+    Object clipboard;
     if (mClipboard == null) {
       try {
         clipboard = mService.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -190,6 +193,46 @@ public class AndroidFacade extends RpcReceiver {
     }
   }
 
+  Intent startActivityForResultCode(final Intent intent) {
+    FutureActivityTask<Intent> task = new FutureActivityTask<Intent>() {
+      @Override
+      public void onCreate() {
+        super.onCreate();
+        try {
+          int requestCode;
+          if (intent!=null){
+            requestCode=intent.getIntExtra("REQUEST_CODE",1024);
+          } else {
+            requestCode=2048;
+          }
+          startActivityForResult(intent, requestCode);
+        } catch (Exception e) {
+          if(intent!=null) {
+            intent.putExtra("EXCEPTION", e.getMessage());
+            setResult(intent);
+          }
+        }
+      }
+
+      @Override
+      public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (data==null)
+          data=new Intent();
+        data.putExtra("RESULT_CODE",resultCode);
+        setResult(data);
+      }
+    };
+    mTaskQueue.execute(task);
+
+    try {
+      return task.getResult();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    } finally {
+      task.finish();
+    }
+  }
+
   // TODO(damonkohler): Pull this out into proper argument deserialization and support
   // complex/nested types being passed in.
   public static void putExtrasFromJsonObject(JSONObject extras, Intent intent) throws JSONException {
@@ -197,9 +240,9 @@ public class AndroidFacade extends RpcReceiver {
     for (int i = 0; i < names.length(); i++) {
       String name = names.getString(i);
       Object data = extras.get(name);
-      if (data == null) {
-        continue;
-      }
+      //if (data == null) {
+      //  continue;
+      //}
       if (data instanceof Integer) {
         intent.putExtra(name, (Integer) data);
       }
@@ -361,12 +404,12 @@ public class AndroidFacade extends RpcReceiver {
     }
   }
 
-  void startActivity(final Intent intent) {
+  void startActivity(final Intent intent) throws Exception {
     try {
-      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      mService.getApplicationContext().startActivity(intent);
+      intent.setFlags(intent.getFlags() | intentFlags);
+      context.startActivity(intent);
     } catch (Exception e) {
-      LogUtil.e("Failed to launch intent.", e);
+      throw new Exception("Failed to launch intent : "+ e);
     }
   }
 
@@ -412,8 +455,9 @@ public class AndroidFacade extends RpcReceiver {
     return startActivityForResult(intent);
   }
 
-  private void doStartActivity(final Intent intent, Boolean wait) throws Exception {
-    if (wait == null || wait == false) {
+  public void doStartActivity(final Intent intent, Boolean wait) throws Exception {
+    Exception[] except = new Exception[1];
+    if (wait == null || !wait) {
       startActivity(intent);
     } else {
       FutureActivityTask<Intent> task = new FutureActivityTask<Intent>() {
@@ -422,7 +466,12 @@ public class AndroidFacade extends RpcReceiver {
         @Override
         public void onCreate() {
           super.onCreate();
-          startActivity(intent);
+          intent.setFlags(intent.getFlags() | intentFlags);
+          try {
+            startActivity(intent);
+          } catch (Exception exception) {
+            except[0] = exception;
+          }
         }
 
         @Override
@@ -445,6 +494,55 @@ public class AndroidFacade extends RpcReceiver {
         task.getResult();
       } catch (Exception e) {
         throw new RuntimeException(e);
+      }
+      if(except[0]!=null) {
+        throw except[0];
+      }
+    }
+  }
+
+  public void doStartActivity(final Intent intent, Boolean wait,int flags) throws Exception {
+    Exception[] except = new Exception[1];
+    if (wait == null || !wait) {
+      startActivity(intent);
+    } else {
+      FutureActivityTask<Intent> task = new FutureActivityTask<Intent>() {
+        private boolean mSecondResume = false;
+
+        @Override
+        public void onCreate() {
+          super.onCreate();
+          intent.setFlags(intent.getFlags() | intentFlags);
+          try {
+            startActivity(intent);
+          } catch (Exception exception) {
+            except[0] = exception;
+          }
+        }
+
+        @Override
+        public void onResume() {
+          if (mSecondResume) {
+            finish();
+          }
+          mSecondResume = true;
+        }
+
+        @Override
+        public void onDestroy() {
+          setResult(null);
+        }
+
+      };
+      mTaskQueue.execute(task,flags);
+
+      try {
+        task.getResult();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      if(except[0]!=null) {
+        throw except[0];
       }
     }
   }
@@ -523,16 +621,27 @@ public class AndroidFacade extends RpcReceiver {
     mVibrator.vibrate(duration);
   }
 
-  @Rpc(description = "Displays a short-duration Toast notification.")
-  public void makeToast(@RpcParameter(name = "message") final String message) {
-    mHandler.post(new Runnable() {
-      @Override
-      public void run() {
-        Toast.makeText(mService, message, Toast.LENGTH_SHORT).show();
-      }
+  @Rpc(description = "Displays a Toast notification.")
+  public void makeToast(@RpcParameter(name = "message") final String message,
+                        @RpcParameter(name = "length") @RpcDefault("0") final Integer length,
+                        @RpcParameter(name = "isHtml") @RpcDefault("false") final Boolean isHtml) {
+    mHandler.post(() -> {
+      if(isHtml)
+          Toast.makeText(mService, HtmlUtil.textToHtml(message), length).show();
+      else
+          Toast.makeText(mService, message, length).show();
     });
   }
 
+  public void makeToast(final String message,final Integer length) {
+    makeToast(message,length,false);
+  }
+
+  public void makeToast(final String message) {
+    makeToast(message,0,false);
+  }
+
+  /* 乘着船：过时删除
   private String getInputFromAlertDialog(final String title, final String message,
                                          final boolean password) {
     final FutureActivityTask<String> task = new FutureActivityTask<String>() {
@@ -591,33 +700,56 @@ public class AndroidFacade extends RpcReceiver {
           @RpcParameter(name = "title", description = "title of the input box") @RpcDefault("SL4A Password Input") final String title,
           @RpcParameter(name = "message", description = "message to display above the input box") @RpcDefault("Please enter password:") final String message) {
     return getInputFromAlertDialog(title, message, true);
-  }
+  }*/
 
   private static int NOTIFICATION_ID = 0x20002;//通知栏消息id
 
+  @SuppressLint("UnspecifiedImmutableFlag")
   @Rpc(description = "Displays a notification that will be canceled when the user clicks on it.")
   public void notify(
           @RpcParameter(name = "title", description = "title") final String title,
           @RpcParameter(name = "message") final String message,
-          @RpcParameter(name = "attachmentUri") @RpcOptional final String attachmentUri) {
+          @RpcParameter(name = "uri") @RpcOptional final String uri,
+          @RpcParameter(name = "arg") @RpcOptional final String arg) {
     // This contentIntent is a noop.
     Intent intent;
-
-    if (attachmentUri!=null) {
-      android.util.Log.d("AndroidFacade", "attachmentUri:"+attachmentUri);
-      if (attachmentUri.startsWith("http:") || attachmentUri.startsWith("https:")) {
-        intent = SPFUtils.getLinkAsIntent(mService.getApplicationContext(), attachmentUri);
+    PendingIntent contentIntent = null;
+    if (uri!=null) {
+      //android.util.Log.d("AndroidFacade", "attachmentUri:"+attachmentUri);
+      if (uri.startsWith("http:") || uri.startsWith("https:")) {
+        intent = SPFUtils.getLinkAsIntent(context, uri);
       } else {
+        if (uri.endsWith(".py")) {
+          try{
+            intent = new Intent (context,NotificationClickReceiver.class);
+            intent.putExtra("path",uri);
+            intent.putExtra("arg",arg);
+            contentIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+          } catch (Exception e) {
+            intent = new Intent();
+            intent.setClassName(mService.getPackageName(), "org.qpython.qpylib.MPyApi");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.setAction("org.qpython.qpylib.action.MPyApi");
+            Bundle mBundle = new Bundle();
+            mBundle.putString("app", SPFUtils.getCode(mService.getApplicationContext()));
+            mBundle.putString("act", "onPyApi");
+            mBundle.putString("flag", "api");
+            mBundle.putString("param", "fileapi");
+            mBundle.putString("pyfile", uri);
+            mBundle.putString("pyarg", arg);
+            intent.putExtras(mBundle);
+          }
+        } else {
         intent = new Intent();
-        intent.setClassName(mService.getApplicationContext().getPackageName(), attachmentUri);
-
-      }
+        intent.setClassName(context.getPackageName(), uri);
+      }}
     } else {
       intent = new Intent();
     }
-    PendingIntent contentIntent = PendingIntent.getActivity(mService, NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    Notification notification = SPFUtils.getNotification(mService.getApplicationContext(), title, message, contentIntent,
-            SPFUtils.getDrawableId(mService, "img_home_logo"), null, Notification.FLAG_AUTO_CANCEL);
+    if(contentIntent == null)
+        contentIntent = PendingIntent.getActivity(mService, NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    Notification notification = SPFUtils.getNotification(context, title, message, contentIntent,
+            SPFUtils.getDrawableId(mService, "img_home_logo"), null);
 
     // Get a unique notification id from the application.
     mNotificationManager.notify(NotificationIdFactory.create(), notification);
@@ -625,7 +757,7 @@ public class AndroidFacade extends RpcReceiver {
 
   @Rpc(description = "Returns the status of network connection.")
   public boolean getNetworkStatus() {
-    return SPFUtils.netCheckin(mService.getApplicationContext());
+    return SPFUtils.netCheckin(context);
   }
 
 
@@ -639,7 +771,7 @@ public class AndroidFacade extends RpcReceiver {
           @RpcParameter(name = "to", description = "A comma separated list of recipients.") final String to,
           @RpcParameter(name = "subject") final String subject,
           @RpcParameter(name = "body") final String body,
-          @RpcParameter(name = "attachmentUri") @RpcOptional final String attachmentUri) {
+          @RpcParameter(name = "attachmentUri") @RpcOptional final String attachmentUri) throws Exception {
     final Intent intent = new Intent(android.content.Intent.ACTION_SEND);
     intent.setType("plain/text");
     intent.putExtra(android.content.Intent.EXTRA_EMAIL, to.split(","));
@@ -682,7 +814,7 @@ public class AndroidFacade extends RpcReceiver {
     return null;
   }
 
-  @Rpc(description = "Checks if version of QPython SL4A is greater than or equal to the specified version.")
+  /*@Rpc(description = "Checks if version of QPython SL4A is greater than or equal to the specified version.")
   public boolean requiredVersion(@RpcParameter(name = "requiredVersion") final Integer version) {
     boolean result = false;
     int packageVersion = getPackageVersionCode("com.googlecode.android_scripting");
@@ -690,7 +822,7 @@ public class AndroidFacade extends RpcReceiver {
       result = (packageVersion >= version);
     }
     return result;
-  }
+  }*/
 
   @Rpc(description = "Writes message to logcat.")
   public void log(@RpcParameter(name = "message") String message) {
@@ -727,7 +859,7 @@ public class AndroidFacade extends RpcReceiver {
     zone.put("offset", tz.getOffset((new Date()).getTime()));
     result.put("TZ", zone);
     result.put("SDK", android.os.Build.VERSION.SDK);
-    result.put("download", FileUtils.getExternalDownload(mService.getApplicationContext()).getAbsolutePath());
+    result.put("download", FileUtils.getExternalDownload().getAbsolutePath());
     result.put("appcache", mService.getCacheDir().getAbsolutePath());
     try {
       StatFs fs = new StatFs("/sdcard");
@@ -766,5 +898,19 @@ public class AndroidFacade extends RpcReceiver {
       }
     }
     return result;
+  }
+
+  public static class NotificationClickReceiver extends BroadcastReceiver {
+    public NotificationClickReceiver(){}
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      Message msg = new Message();
+      msg.obj = new String[]{
+              intent.getStringExtra("path"),
+              intent.getStringExtra("arg")
+      };
+      handler.sendMessage(msg);
+    }
   }
 }

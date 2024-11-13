@@ -21,6 +21,7 @@ import org.qpython.qpy.main.app.App;
 import org.qpython.qpy.main.server.MySubscriber;
 import org.qpython.qpy.main.server.model.UpdateModel;
 import org.qpython.qpy.texteditor.androidlib.common.MiscUtils;
+import org.qpython.qpysdk.QPyConstants;
 
 
 /**
@@ -45,6 +46,9 @@ public class AboutActivity extends BaseActivity {
             PackageInfo pInfo = this.getPackageManager().getPackageInfo(getPackageName(), 0);
             String version = pInfo.versionName;
             binding.version.setText(getString(R.string.v_version, version));
+            binding.description.setText(
+                    getString(R.string.qpy_description)
+                    .replace("PyVer", QPyConstants.PyVer));
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
@@ -60,6 +64,10 @@ public class AboutActivity extends BaseActivity {
         checkUpdate(true);
     }
 
+    private void viewWebSite(int resId) {
+        startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(getString(resId))));
+    }
+
     private void initListener() {
         binding.tvStar.setOnClickListener(v -> {
             Intent viewIntent = new Intent("android.intent.action.VIEW",
@@ -68,8 +76,7 @@ public class AboutActivity extends BaseActivity {
         });
 
         binding.tvPrivacy.setOnClickListener(v -> {
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_html)));
-            startActivity(browserIntent);
+            viewWebSite(R.string.url_user_private);
         });
 
         binding.tvFeedback.setOnClickListener(v -> onFeedback(""));
@@ -80,7 +87,31 @@ public class AboutActivity extends BaseActivity {
         });
 
         binding.tvThanks.setOnClickListener(v ->
-            startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(getString(R.string.thanks_link))))
+            viewWebSite(R.string.thanks_link)
+        );
+
+        String[] words = new String[]{
+                "qpython-github",
+                "qpython-gitee",
+                "qpython-3c-gitee",
+                "qpython-sl4a-gui-gitee"
+        };
+        int[] sites = new int[]{
+                R.string.qpython_github,
+                R.string.qpython_gitee,
+                R.string.qpython_3c_gitee,
+                R.string.qpython_sl4a_gui_gitee
+        };
+
+        binding.qpythonGit.setOnClickListener(v ->
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.qpython_git_links)
+                        .setItems(words, (dialogInterface, i) -> {
+                            viewWebSite(sites[i]);
+                            dialogInterface.dismiss();
+                        })
+                        .create()
+                        .show()
         );
     }
 

@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
@@ -30,6 +31,7 @@ import android.widget.Toast;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.quseit.base.QBaseApp;
 import com.quseit.common.updater.downloader.Downloader;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NStorage;
 
@@ -37,8 +39,8 @@ import org.apache.http.Header;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.qpython.qpy.R;
+import org.qpython.qpy.console.ScriptExec;
 import org.qpython.qpy.main.activity.AboutActivity;
-import org.qpython.qpy.main.activity.CourseActivity;
 import org.qpython.qpy.main.activity.HomeMainActivity;
 import org.qpython.qpy.main.app.App;
 import org.qpython.qpy.main.service.FTPServerService;
@@ -49,7 +51,6 @@ import org.qpython.qpysdk.QPyConstants;
 import org.qpython.qpysdk.QPySDK;
 import org.qpython.qpysdk.utils.Utils;
 import org.qpython.qsl4a.QPyScriptService;
-import org.swiftp.Util;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -69,12 +70,12 @@ public class SettingFragment extends PreferenceFragment {
     private LoadingDialog mLoadingDialog;
 
     private SharedPreferences settings;
-    private Resources         resources;
-    private Preference        mPassWordPref, username_pref, portnum_pref, chroot_pref, lastlog;
-    private CheckBoxPreference sl4a, running_state, root, display_pwd, notebook_run;
+    private Resources resources;
+    private Preference mPassWordPref, username_pref, portnum_pref, chroot_pref, lastlog, ipaddress;
+    private CheckBoxPreference sl4a, running_state, root, display_pwd, notebook_run, keepAliveBox;
 
-    private PreferenceScreen py_inter,notebook_page;
-    private Preference py3,py2; //notebook_res, py2compatible
+    private PreferenceScreen py_inter, notebook_page;
+    //private Preference py3, py2; notebook_res, py2compatible
     //private Preference update_qpy3,update_qpy2compatible;
 
     private SwitchPreference log, app;
@@ -82,16 +83,21 @@ public class SettingFragment extends PreferenceFragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.v(TAG, "FTPServerService action received: " + intent.getAction());
-            if (intent.getAction().equals(FTPServerService.ACTION_STARTED)) {
-                running_state.setChecked(true);
-                // Fill in the FTP server address
-                setFtpAddress();
-            } else if (intent.getAction().equals(FTPServerService.ACTION_STOPPED)) {
-                running_state.setChecked(false);
-                running_state.setSummary(org.swiftp.R.string.running_summary_stopped);
-            } else if (intent.getAction().equals(FTPServerService.ACTION_FAILEDTOSTART)) {
-                running_state.setChecked(false);
-                running_state.setSummary(org.swiftp.R.string.running_summary_failed);
+            switch (intent.getAction()) {
+                case FTPServerService.ACTION_STARTED:
+                    running_state.setChecked(true);
+                    // Fill in the FTP server address
+                    setFtpAddress();
+                    break;
+                case FTPServerService.ACTION_STOPPED:
+                    running_state.setChecked(false);
+                    running_state.setSummary(org.swiftp.R.string.running_summary_stopped);
+                    break;
+                case FTPServerService.ACTION_FAILEDTOSTART:
+                    running_state.setChecked(false);
+                    running_state.setSummary(org.swiftp.R.string.running_summary_failed);
+                    Toast.makeText(getActivity(), R.string.ip_address_need_wifi_or_ap, Toast.LENGTH_LONG).show();
+                    break;
             }
         }
     };
@@ -99,7 +105,7 @@ public class SettingFragment extends PreferenceFragment {
     static private String transformPassword(String password) {
         StringBuilder sb = new StringBuilder(password.length());
         for (int i = 0; i < password.length(); ++i)
-            sb.append('*');
+        {sb.append('*');}
         return sb.toString();
     }
 
@@ -131,29 +137,36 @@ public class SettingFragment extends PreferenceFragment {
         super.onResume();
     }
 
-    private void initSettings() {
-        Preference ipaddress = findPreference("ipaddress");
+    private boolean showIpAddress(){
         InetAddress ip;
         try {
-            ip = FTPServerService.getWifiIp();
+            ip = FTPServerService.getWifiAndApIp();
         } catch (NullPointerException e) {
             ip = null;
 
         }
         if (ip!=null) {
             ipaddress.setSummary(ip.getHostAddress());
+            return true;
         } else {
-            ipaddress.setSummary(R.string.ip_address_need_wifi);
+            ipaddress.setSummary(R.string.ip_address_need_wifi_or_ap);
+            return false;
         }
+    }
+
+    private void initSettings() {
+        ipaddress = findPreference("ipaddress");
+        showIpAddress();
+
         lastlog = (Preference) findPreference("lastlog");
-        py_inter = (PreferenceScreen) findPreference(getString(R.string.key_py_inter));
+        //py_inter = (PreferenceScreen) findPreference(getString(R.string.key_py_inter));
         notebook_page = (PreferenceScreen) findPreference(getString(R.string.key_notebook_page));
         notebook_page.setTitle(MessageFormat.format(getString(R.string.notebook_for_py), NAction.getPyVer(getActivity())));
         if (NAction.isQPy3(getActivity())) {
             notebook_page.setSummary(NotebookUtil.isNotebookLibInstall(getActivity()) ? R.string.notebook_installed : R.string.notebook_not_started);
 
         } else {
-            notebook_page.setSummary( R.string.notebook_py3_support);
+            notebook_page.setSummary(R.string.notebook_py3_support);
 
         }
 
@@ -163,12 +176,13 @@ public class SettingFragment extends PreferenceFragment {
 
         //update_qpy3 = (Preference)findPreference(getString(R.string.key_update_qpy3));
         //update_qpy2compatible = (Preference)findPreference(getString(R.string.key_update_qpy2compatible));
-        py2 = (Preference) findPreference(getString(R.string.key_py2));
+        //py2 = (Preference) findPreference(getString(R.string.key_py2));
         //py2compatible = (Preference) findPreference(getString(R.string.key_py2compatible));
-        py3 = (Preference) findPreference(getString(R.string.key_py3));
+        //py3 = (Preference) findPreference(getString(R.string.key_py3));
 
 
         root = (CheckBoxPreference) findPreference(resources.getString(R.string.key_root));
+        keepAliveBox = (CheckBoxPreference) findPreference(resources.getString(R.string.key_alive));
         sl4a = (CheckBoxPreference) findPreference(resources.getString(R.string.key_sl4a));
         app = (SwitchPreference) findPreference(getString(R.string.key_hide_push));
         log = (SwitchPreference) findPreference(resources.getString(R.string.key_hide_noti));
@@ -180,10 +194,15 @@ public class SettingFragment extends PreferenceFragment {
         portnum_pref = findPreference(resources.getString(R.string.key_port_num));
         chroot_pref = findPreference(resources.getString(R.string.key_root_dir));
 
-        boolean isRoot, isRunning, isSaverOn;
+        boolean isRoot, isRunning;
         isRoot = settings.getBoolean(getString(R.string.key_root), false);
         root.setChecked(isRoot);
         root.setSummary(isRoot ? R.string.enable_root : R.string.disable_root);
+
+        boolean isKeepAlive;
+        isKeepAlive = settings.getBoolean(getString(R.string.key_alive), false);
+        keepAliveBox.setChecked(isKeepAlive);
+        keepAliveBox.setSummary(isKeepAlive ? R.string.enable_keep_alive : R.string.disable_keep_alive);
 
         isRunning = isMyServiceRunning(QPyScriptService.class);
         sl4a.setChecked(isRunning);
@@ -204,13 +223,14 @@ public class SettingFragment extends PreferenceFragment {
         portnum_pref.setSummary(settings.getString(resources.getString(R.string.key_port_num),
                 resources.getString(org.swiftp.R.string.portnumber_default)));
         chroot_pref.setSummary(settings.getString(resources.getString(R.string.key_root_dir),
-                Environment.getExternalStorageDirectory().getPath()));
+                FileUtils.getPath(App.getContext()).getPath()));
 
-        py_inter.setSummary(NAction.isQPy3(getActivity()) ? R.string.py3_now : R.string.py2_now);
+        //py_inter.setSummary(NAction.isQPy3(getActivity()) ? R.string.py3_now : R.string.py2_now);
         //setNotebookCheckbox();
 
         SharedPreferences.Editor editor = settings.edit();
         editor.putBoolean(getString(R.string.key_root), root.isChecked());
+        editor.putBoolean(getString(R.string.key_alive), keepAliveBox.isChecked());
         //editor.putString(getString(R.string.key_qpypi), qpypi.getSummary().toString());
         editor.putString(getString(R.string.key_username), username_pref.getSummary().toString());
         editor.putString(getString(R.string.key_ftp_pwd), settings.getString(mPassWordPref.getKey(), "ftp"));
@@ -222,10 +242,11 @@ public class SettingFragment extends PreferenceFragment {
     }
 
     private void setFtpAddress() {
-        InetAddress address = FTPServerService.getWifiIp();
+        InetAddress address = FTPServerService.getWifiAndApIp();
         if (address == null) {
             Log.v(TAG, "Unable to retreive wifi ip address");
             running_state.setSummary(org.swiftp.R.string.cant_get_url);
+            Toast.makeText(getActivity(),"FTP: "+getString(R.string.ip_address_need_wifi_or_ap),Toast.LENGTH_LONG).show();
         } else {
             String iptext = "ftp://" + address.getHostAddress() + ":"
                     + FTPServerService.getPort() + "/";
@@ -249,10 +270,12 @@ public class SettingFragment extends PreferenceFragment {
     private void initListener() {
 
         lastlog.setOnPreferenceClickListener(preference -> {
-            Utils.checkRunTimeLog(getActivity(), getString(R.string.last_log), QPyConstants.ABSOLUTE_LOG);
+            Utils.checkRunTimeLog(getActivity(), getString(R.string.last_log), FileUtils.getAbsoluteLogPath(App.getContext()));
 
             return false;
         });
+
+        ipaddress.setOnPreferenceClickListener(preference -> showIpAddress());
 
         if (!NAction.isQPy3(getActivity())) {
             notebook_run.setSummary(getString(R.string.notebook_py3_support));
@@ -262,19 +285,19 @@ public class SettingFragment extends PreferenceFragment {
             notebook_run.setChecked(NotebookUtil.isNBSrvSet(getActivity()));
 
             notebook_run.setOnPreferenceChangeListener((preference, newValue) -> {
-                if ((boolean)newValue) {
+                if ((boolean) newValue) {
                     NotebookUtil.startNotebookService2(getActivity());
 
                 } else {
                     NotebookUtil.killNBSrv(getActivity());
                 }
-                notebook_page.setSummary(NotebookUtil.isNotebookEnable(getActivity())?R.string.notebook_installed : R.string.notebook_not_started);
+                notebook_page.setSummary(NotebookUtil.isNotebookEnable(getActivity()) ? R.string.notebook_installed : R.string.notebook_not_started);
 
                 return true;
             });
         }
 
-        py2.setOnPreferenceClickListener(preference -> {
+        /*py2.setOnPreferenceClickListener(preference -> {
             Log.d(TAG, "py2.setOnPreferenceClickListener");
             NotebookUtil.killNBSrv(getActivity());
 
@@ -287,7 +310,7 @@ public class SettingFragment extends PreferenceFragment {
             releasePython3(preference);
 
             return false;
-        });
+        });*/
 
         root.setOnPreferenceChangeListener((preference, newValue) ->
         {
@@ -303,6 +326,20 @@ public class SettingFragment extends PreferenceFragment {
                 NStorage.setSP(getActivity(), "app.root", "0");
                 return true;
             }
+        });
+
+        keepAliveBox.setOnPreferenceChangeListener((preference, newValue) ->
+        {
+            boolean isCheck = (boolean) newValue;
+            settings.edit().putBoolean(getString(R.string.key_alive), isCheck).apply();
+            Toast.makeText(getActivity(), R.string.keep_alive_tips, Toast.LENGTH_SHORT).show();
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    restartAppV2();
+                }
+            },2000);
+            return true;
         });
 
         sl4a.setOnPreferenceChangeListener((preference, newValue) ->
@@ -333,32 +370,32 @@ public class SettingFragment extends PreferenceFragment {
         });
 
         findPreference(resources.getString(R.string.key_reset)).
-            setOnPreferenceClickListener(preference ->
-            {
-                NAction.startInstalledAppDetailsActivity(getActivity());
-                return false;
-            });
+                setOnPreferenceClickListener(preference ->
+                {
+                    NAction.startInstalledAppDetailsActivity(getActivity());
+                    return false;
+                });
 
         findPreference(resources.getString(R.string.key_about)).
-            setOnPreferenceClickListener(preference ->
-            {
-                AboutActivity.start(getActivity());
-                return true;
-            });
+                setOnPreferenceClickListener(preference ->
+                {
+                    AboutActivity.start(getActivity());
+                    return true;
+                });
 
-        findPreference("course").
-            setOnPreferenceClickListener(preference ->
-            {
-                CourseActivity.start(getActivity());
-                return true;
-            });
+//        findPreference("course").
+//                setOnPreferenceClickListener(preference ->
+//                {
+//                    CourseActivity.start(getActivity());
+//                    return true;
+//                });
 
         findPreference("community").
-            setOnPreferenceClickListener(preference ->
-            {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(URL_COMMUNITY+"?from="+NAction.getCode(this.getActivity()))));
-                return true;
-            });
+                setOnPreferenceClickListener(preference ->
+                {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(URL_COMMUNITY + "?from=" + NAction.getCode(this.getActivity()))));
+                    return true;
+                });
         /*  ====================FTP====================   */
         running_state.setOnPreferenceChangeListener((preference, newValue) ->
         {
@@ -475,10 +512,18 @@ public class SettingFragment extends PreferenceFragment {
         });
     }
 
+    private void restartAppV2() {
+        Intent intent = getActivity().getPackageManager().getLaunchIntentForPackage(getActivity().getPackageName());
+        PendingIntent restartIntent = PendingIntent.getActivity(getActivity().getApplicationContext(), 0, intent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        AlarmManager mgr = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
+        mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 1000, restartIntent); // 1秒钟后重启应用
+        System.exit(0);
+    }
+
     private void releaseNotebook(Preference preference) {
         Observable.create((Observable.OnSubscribe<Boolean>) subscriber -> {
             try {
-                String nbfile = NStorage.getSP(App.getContext(), NotebookUtil.getNbResFk(getActivity()));
+                String nbfile = NStorage.getSP(App.getContext(), NotebookUtil.getNbResFk());
                 if (!nbfile.equals("") && new File(nbfile).exists()) {    //
                     extractNotebookRes(nbfile);
                 }
@@ -493,32 +538,32 @@ public class SettingFragment extends PreferenceFragment {
             }
 
         })
-        .subscribeOn(Schedulers.io())
-        .doOnSubscribe(() -> mLoadingDialog.show())
-        .subscribeOn(AndroidSchedulers.mainThread())
-        .observeOn(AndroidSchedulers.mainThread())
-        .doOnTerminate(() -> mLoadingDialog.dismiss())
-        .subscribe(new Observer<Boolean>() {
-            @Override
-            public void onCompleted() {
+                .subscribeOn(Schedulers.io())
+                .doOnSubscribe(() -> mLoadingDialog.show())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnTerminate(() -> mLoadingDialog.dismiss())
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onCompleted() {
 
-            }
+                    }
 
-            @Override
-            public void onError(Throwable e) {
+                    @Override
+                    public void onError(Throwable e) {
 
-            }
+                    }
 
-            @Override
-            public void onNext(Boolean aBoolean) {
-                Log.d(TAG, "onNext");
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        Log.d(TAG, "onNext");
 
-                NotebookUtil.startNotebookService2(getActivity());
-                notebook_page.setSummary(NotebookUtil.isNotebookLibInstall(getActivity())?R.string.notebook_installed : R.string.notebook_not_started);
+                        NotebookUtil.startNotebookService2(getActivity());
+                        notebook_page.setSummary(NotebookUtil.isNotebookLibInstall(getActivity()) ? R.string.notebook_installed : R.string.notebook_not_started);
 
 
-            }
-        });
+                    }
+                });
     }
 
     private void installNotebook() {
@@ -539,7 +584,7 @@ public class SettingFragment extends PreferenceFragment {
     private void extractNotebookRes(String path) {
         final String extarget = NotebookUtil.RELEASE_PATH;
 
-        if (path!=null && !path.equals("")) {
+        if (path != null && !path.equals("")) {
             File resf = new File(path);
             if (resf.exists()) {
                 QPySDK qpySDK = new QPySDK(App.getContext(), getActivity());
@@ -550,9 +595,9 @@ public class SettingFragment extends PreferenceFragment {
 
 
     private void releaseQPycRes(String path) {
-        final String extarget = QPyConstants.PY_CACHE_PATH;
+        final String extarget = FileUtils.getPyCachePath(App.getContext());
 
-        if (path!=null && !path.equals("")) {
+        if (path != null && !path.equals("")) {
             File res = new File(path);
 
             if (res.exists()) {
@@ -562,14 +607,14 @@ public class SettingFragment extends PreferenceFragment {
         }
     }
 
-    private void releasePython2Standard(Preference preference) {
+    /*private void releasePython2Standard(Preference preference) {
         Observable.create((Observable.OnSubscribe<Boolean>) subscriber -> {
             try {
                 //removeQPyc2Core();
                 QPySDK qpysdk = new QPySDK(getActivity(), getActivity());
                 qpysdk.extractRes("private1", getActivity().getFilesDir(), true);
                 qpysdk.extractRes("private2", getActivity().getFilesDir(), true);
-                qpysdk.extractRes("private3", getActivity().getFilesDir(),true);
+                qpysdk.extractRes("private3", getActivity().getFilesDir(), true);
 
                 subscriber.onNext(true);
                 subscriber.onCompleted();
@@ -578,33 +623,33 @@ public class SettingFragment extends PreferenceFragment {
                 subscriber.onError(new Throwable("Failed to release Py2 resources"));
             }
         })
-        .subscribeOn(Schedulers.io())
-        .doOnSubscribe(() -> mLoadingDialog.show())
-        .subscribeOn(AndroidSchedulers.mainThread())
-        .observeOn(AndroidSchedulers.mainThread())
-        .doOnTerminate(() -> mLoadingDialog.dismiss())
-        .subscribe(new Observer<Boolean>() {
-            @Override
-            public void onCompleted() {
+                .subscribeOn(Schedulers.io())
+                .doOnSubscribe(() -> mLoadingDialog.show())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnTerminate(() -> mLoadingDialog.dismiss())
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onCompleted() {
 
-            }
+                    }
 
-            @Override
-            public void onError(Throwable e) {
-                Toast.makeText(getActivity(), "Faild to extract Py2 resource", Toast.LENGTH_SHORT).show();
-            }
+                    @Override
+                    public void onError(Throwable e) {
+                        Toast.makeText(getActivity(), "Faild to extract Py2 resource", Toast.LENGTH_SHORT).show();
+                    }
 
-            @Override
-            public void onNext(Boolean aBoolean) {
-                NAction.setQPyInterpreter(getActivity(), "2.x");
-                py_inter.setSummary(R.string.py2_now);
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        NAction.setQPyInterpreter(getActivity(), "2.x");
+                        py_inter.setSummary(R.string.py2_now);
 
-                getActivity().recreate();
-            }
-        });
-    }
+                        getActivity().recreate();
+                    }
+                });
+    }*/
 
-    private void releasePython2Compatable(Preference preference) {
+    /*private void releasePython2Compatable(Preference preference) {
         Observable.create((Observable.OnSubscribe<Boolean>) subscriber -> {
             try {
 
@@ -619,80 +664,78 @@ public class SettingFragment extends PreferenceFragment {
                 subscriber.onError(new Throwable("Failed to release Py2 resources"));
             }
         })
-        .subscribeOn(Schedulers.io())
-        .doOnSubscribe(() -> mLoadingDialog.show())
-        .subscribeOn(AndroidSchedulers.mainThread())
-        .observeOn(AndroidSchedulers.mainThread())
-        .doOnTerminate(() -> mLoadingDialog.dismiss())
-        .subscribe(new Observer<Boolean>() {
-            @Override
-            public void onCompleted() {
+                .subscribeOn(Schedulers.io())
+                .doOnSubscribe(() -> mLoadingDialog.show())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnTerminate(() -> mLoadingDialog.dismiss())
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onCompleted() {
 
-            }
+                    }
 
-            @Override
-            public void onError(Throwable e) {
-                Toast.makeText(getActivity(), "Faild to extract Py2 resource", Toast.LENGTH_SHORT).show();
-            }
+                    @Override
+                    public void onError(Throwable e) {
+                        Toast.makeText(getActivity(), "Faild to extract Py2 resource", Toast.LENGTH_SHORT).show();
+                    }
 
-            @Override
-            public void onNext(Boolean aBoolean) {
-                NAction.setQPyInterpreter(getActivity(), "2.x");
-                py_inter.setSummary(R.string.py2_now);
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        NAction.setQPyInterpreter(getActivity(), "2.x");
+                        py_inter.setSummary(R.string.py2_now);
 
-                getActivity().recreate();
-            }
-        });
-    }
+                        getActivity().recreate();
+                    }
+                });
+    }*/
 
 
     private void releasePython3(Preference preference) {
         QPySDK qpysdk = new QPySDK(this.getActivity(), this.getActivity());
         Observable.create((Observable.OnSubscribe<Boolean>) subscriber -> {
             try {
-                releaseQPycRes(NStorage.getSP(App.getContext(),QPyConstants.KEY_PY3_RES));
+                //releaseQPycRes(NStorage.getSP(App.getContext(), QPyConstants.KEY_PY3_RES));
                 //extractQPyCore(false);
-
-                qpysdk.extractRes("private31", getActivity().getFilesDir(), true);
-                qpysdk.extractRes("private32", getActivity().getFilesDir(), true);
-                qpysdk.extractRes("private33", getActivity().getFilesDir(),true);
-                qpysdk.extractRes("notebook3", getActivity().getFilesDir(), true);
-
-                File externalStorage = new File(Environment.getExternalStorageDirectory(), "qpython");
-
-                qpysdk.extractRes("publi3c", new File(externalStorage + "/lib"));
-
+                //qpysdk.extractRes("private31", getActivity().getFilesDir(), true);
+                //qpysdk.extractRes("private32", getActivity().getFilesDir(), true);
+                qpysdk.extractRes("resource3", getActivity().getFilesDir(), true);
+                //qpysdk.extractRes("notebook3", getActivity().getFilesDir(), true);
+                //File externalStorage = new File(FileUtils.getPath(App.getContext()), "qpython");
+                //qpysdk.extractRes("public3", new File(externalStorage + "/lib"));
                 subscriber.onNext(true);
+                ScriptExec.getInstance().playScript(getActivity(),
+                        "setup", null);
                 subscriber.onCompleted();
             } catch (Exception e) {
-                e.printStackTrace();
-                subscriber.onError(new Throwable("Failed to release Py3 resources"));
+                //e.printStackTrace();
+                subscriber.onError(new Throwable("Failed to release Py3 resources . "+e));
             }
         })
-        .subscribeOn(Schedulers.io())
-        .doOnSubscribe(() -> mLoadingDialog.show())
-        .subscribeOn(AndroidSchedulers.mainThread())
-        .observeOn(AndroidSchedulers.mainThread())
-        .doOnTerminate(() -> mLoadingDialog.dismiss())
-        .subscribe(new Observer<Boolean>() {
-            @Override
-            public void onCompleted() {
+                .subscribeOn(Schedulers.io())
+                .doOnSubscribe(() -> mLoadingDialog.show())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnTerminate(() -> mLoadingDialog.dismiss())
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onCompleted() {
 
-            }
+                    }
 
-            @Override
-            public void onError(Throwable e) {
-                Toast.makeText(getActivity(), "Faild to extract Py3 resource", Toast.LENGTH_SHORT).show();
-            }
+                    @Override
+                    public void onError(Throwable e) {
+                        Toast.makeText(getActivity(), "Faild to extract Py3 resource . "+e.toString(), Toast.LENGTH_SHORT).show();
+                    }
 
-            @Override
-            public void onNext(Boolean aBoolean) {
-                NAction.setQPyInterpreter(getActivity(), "3.x");
-                py_inter.setSummary(R.string.py3_now);
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        NAction.setQPyInterpreter(getActivity(), "3.x");
+                        py_inter.setSummary(R.string.py3_now);
 
-                getActivity().recreate();
-            }
-        });
+                        getActivity().recreate();
+                    }
+                });
 
     }
 
@@ -709,7 +752,7 @@ public class SettingFragment extends PreferenceFragment {
     private void restartApp() {
         Intent mStartActivity = new Intent(getActivity(), HomeMainActivity.class);
         int mPendingIntentId = 123456;
-        PendingIntent mPendingIntent = PendingIntent.getActivity(getActivity(), mPendingIntentId, mStartActivity, PendingIntent.FLAG_CANCEL_CURRENT);
+        PendingIntent mPendingIntent = PendingIntent.getActivity(getActivity(), mPendingIntentId, mStartActivity, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         AlarmManager mgr = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
         mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 100, mPendingIntent);
         System.exit(0);
@@ -757,206 +800,209 @@ public class SettingFragment extends PreferenceFragment {
         mLoadingDialog.show();
 
         QBaseApp.getInstance().getAsyncHttpClient().get(getActivity(), NotebookUtil.getNBLink(getActivity()),
-        null, new JsonHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject result) {
-                final String KEY_RES = "setting.notebookresource.ver";
+                null, new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject result) {
+                        final String KEY_RES = "setting.notebookresource.ver";
 
-                try {
+                        try {
 
-                    final String notebook_resource_ver = NStorage.getSP(getActivity(), KEY_RES);
-                    final String url = result.getString("link");
-                    final String target = result.getString("target");
-                    final String vercode = result.getString("vercode");
-                    final String title = result.getString("title");
-                    final String vername = result.getString("vername");
-                    final String path = NotebookUtil.RELEASE_PATH+"/"+target;
+                            final String notebook_resource_ver = NStorage.getSP(getActivity(), KEY_RES);
+                            final String url = result.getString("link");
+                            final String target = result.getString("target");
+                            final String vercode = result.getString("vercode");
+                            final String title = result.getString("title");
+                            final String vername = result.getString("vername");
+                            final String path = NotebookUtil.RELEASE_PATH + "/" + target;
 
-                    NStorage.setSP(App.getContext(),  NotebookUtil.getNbResFk(getActivity()), path);
+                            NStorage.setSP(App.getContext(), NotebookUtil.getNbResFk(), path);
 
-                    Log.d(TAG, "getNotebook:onSuccess:"+notebook_resource_ver+"["+vercode+"]");
+                            Log.d(TAG, "getNotebook:onSuccess:" + notebook_resource_ver + "[" + vercode + "]");
 
-                    if (notebook_resource_ver.equals(vercode) && new File(path).exists()) {
-                        mLoadingDialog.dismiss();
-
-                        new AlertDialog.Builder(getActivity(), R.style.MyDialog)
-                            .setTitle(title)
-                            .setMessage(R.string.newest_resource)
-                            .setPositiveButton(R.string.ok, (dialog1, which) -> {
-                                try {
-                                    extractNotebookRes(path);
-                                } catch (Exception e) {
-
-                                }
-                                dialog1.dismiss();
-                            })
-                            .create()
-                            .show();
-
-                    } else {
-                        App.getDownloader().download(getString(R.string.download_notebook), url, path, new Downloader.Callback() {
-
-                            @Override
-                            public void pending(String name) {
-                                mLoadingDialog.cancel();
-
-                                new AlertDialog.Builder(getActivity(), R.style.MyDialog)
-                                    .setTitle(R.string.notice)
-                                    .setMessage(R.string.download_progress_need_sometime)
-                                    .setPositiveButton(R.string.ok, (dialog1, which) -> {
-                                    })
-                                    .create()
-                                    .show();
-                            }
-
-                            @Override
-                            public void complete(String name, File installer) {
-
-                                Log.d(TAG, "getNotebook:complete:" + name + "[" + installer.getAbsolutePath() + "]");
+                            if (notebook_resource_ver.equals(vercode) && new File(path).exists()) {
                                 mLoadingDialog.dismiss();
 
+                                new AlertDialog.Builder(getActivity(), R.style.MyDialog)
+                                        .setTitle(title)
+                                        .setMessage(R.string.newest_resource)
+                                        .setPositiveButton(R.string.ok, (dialog1, which) -> {
+                                            try {
+                                                extractNotebookRes(path);
+                                            } catch (Exception e) {
 
-                                NStorage.setSP(App.getContext(),KEY_RES, vercode);
+                                            }
+                                            dialog1.dismiss();
+                                        })
+                                        .create()
+                                        .show();
 
-                                // UNZIP resources && install
-                                try {
-                                    extractNotebookRes(installer.getAbsolutePath());
-                                    Toast.makeText(App.getContext(), R.string.file_downloaded, Toast.LENGTH_SHORT).show();
+                            } else {
+                                App.getDownloader().download(getString(R.string.download_notebook), url, path, new Downloader.Callback() {
 
-                                } catch (Exception e) {
+                                    @Override
+                                    public void pending(String name) {
+                                        mLoadingDialog.cancel();
 
-                                }
+                                        new AlertDialog.Builder(getActivity(), R.style.MyDialog)
+                                                .setTitle(R.string.notice)
+                                                .setMessage(R.string.download_progress_need_sometime)
+                                                .setPositiveButton(R.string.ok, (dialog1, which) -> {
+                                                })
+                                                .create()
+                                                .show();
+                                    }
+
+                                    @Override
+                                    public void complete(String name, File installer) {
+
+                                        Log.d(TAG, "getNotebook:complete:" + name + "[" + installer.getAbsolutePath() + "]");
+                                        mLoadingDialog.dismiss();
+
+
+                                        NStorage.setSP(App.getContext(), KEY_RES, vercode);
+
+                                        // UNZIP resources && install
+                                        try {
+                                            extractNotebookRes(installer.getAbsolutePath());
+                                            Toast.makeText(App.getContext(), R.string.file_downloaded, Toast.LENGTH_SHORT).show();
+
+                                        } catch (Exception e) {
+
+                                        }
+                                    }
+
+                                    @Override
+                                    public void error(String err) {
+                                        mLoadingDialog.cancel();
+                                        try {
+                                            Toast.makeText(getActivity(), err, Toast.LENGTH_SHORT).show();
+                                        } catch (Exception e) {
+
+                                        }
+                                    }
+                                });
                             }
-
-                            @Override
-                            public void error(String err) {
-                                mLoadingDialog.cancel();
-                                try {
-                                    Toast.makeText(getActivity(), err, Toast.LENGTH_SHORT).show();
-                                } catch (Exception e) {
-
-                                }
-                            }
-                        });
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            @Override
-            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-                // waitingWindow.dismiss();
-                Log.d(TAG, "Error in checkConfUpdate:" + throwable.getMessage());
-            }
-        });
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                        // waitingWindow.dismiss();
+                        Log.d(TAG, "Error in checkConfUpdate:" + throwable.getMessage());
+                    }
+                });
 
     }
+
     private void getQPYC(boolean ispy2compatible) {
         mLoadingDialog.show();
 
-        String conf_url = (ispy2compatible?QPyConstants.QPYC2COMPATIBLE:QPyConstants.QPYC3)+"?"+NAction.getUserUrl(getActivity());
+        String conf_url = (ispy2compatible ? QPyConstants.QPYC2COMPATIBLE : QPyConstants.QPYC3) + "?" + NAction.getUserUrl(getActivity());
 
         QBaseApp.getInstance().getAsyncHttpClient().get(getActivity(), conf_url,
-        null, new JsonHttpResponseHandler() {
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject result) {
-                    final String KEY_RES = ispy2compatible?QPyConstants.QPYC2COMPATIBLE_VER_KEY:QPyConstants.QPYC3_VER_KEY;
+                null, new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject result) {
+                        final String KEY_RES = ispy2compatible ? QPyConstants.QPYC2COMPATIBLE_VER_KEY : QPyConstants.QPYC3_VER_KEY;
 
-                    try {
+                        try {
 
-                        final String py_resource_ver = NStorage.getSP(getActivity(), KEY_RES);
+                            final String py_resource_ver = NStorage.getSP(getActivity(), KEY_RES);
 
-                        final String url = result.getString("link");
-                        final String target = result.getString("target");
-                        final String vercode = result.getString("vercode");
-                        final String title = result.getString("title");
-                        final String vername = result.getString("vername");
-                        final String path = QPyConstants.PY_CACHE_PATH + "/" + target;
+                            final String url = result.getString("link");
+                            final String target = result.getString("target");
+                            final String vercode = result.getString("vercode");
+                            final String title = result.getString("title");
+                            final String vername = result.getString("vername");
+                            final String path = FileUtils.getPyCachePath(App.getContext()) + "/" + target;
 
-                        NStorage.setSP(App.getContext(), QPyConstants.KEY_PY3_RES, path);
+                            NStorage.setSP(App.getContext(), QPyConstants.KEY_PY3_RES, path);
 
-                        Log.d(TAG, "getQPYC:onSuccess:"+py_resource_ver+"["+vercode+"]");
+                            Log.d(TAG, "getQPYC:onSuccess:" + py_resource_ver + "[" + vercode + "]");
 
-                        if (py_resource_ver.equals(vercode) && new File(path).exists()) {
-                            mLoadingDialog.dismiss();
+                            if (py_resource_ver.equals(vercode) && new File(path).exists()) {
+                                mLoadingDialog.dismiss();
 
-                            new AlertDialog.Builder(getActivity(), R.style.MyDialog)
-                                .setTitle(title)
-                                .setMessage(R.string.newest_resource)
-                                .setPositiveButton(R.string.ok, (dialog1, which) -> {
-                                    try {
-                                        releaseQPycRes(path);
-                                    } catch (Exception e) {
+                                new AlertDialog.Builder(getActivity(), R.style.MyDialog)
+                                        .setTitle(title)
+                                        .setMessage(R.string.newest_resource)
+                                        .setPositiveButton(R.string.ok, (dialog1, which) -> {
+                                            try {
+                                                releaseQPycRes(path);
+                                            } catch (Exception e) {
 
+                                            }
+
+                                            dialog1.dismiss();
+                                        })
+                                        .create()
+                                        .show();
+
+                            } else {
+
+                                App.getDownloader().download(getString(R.string.download_py), url, path, new Downloader.Callback() {
+
+                                    @Override
+                                    public void pending(String name) {
+                                        mLoadingDialog.cancel();
+
+                                        new AlertDialog.Builder(getActivity(), R.style.MyDialog)
+                                                .setTitle(R.string.notice)
+                                                .setMessage(R.string.download_progress_need_sometime)
+                                                //.setNegativeButton(R.string.cancel, (dialog1, which) -> dialog1.dismiss())
+                                                .setPositiveButton(R.string.ok, (dialog1, which) -> {
+                                                })
+                                                .create()
+                                                .show();
                                     }
 
-                                    dialog1.dismiss();
-                                })
-                                .create()
-                                .show();
+                                    @Override
+                                    public void complete(String name, File installer) {
 
-                        } else {
+                                        Log.d(TAG, "getQPYC:complete:" + name + "[" + installer.getAbsolutePath() + "]");
+                                        mLoadingDialog.dismiss();
 
-                            App.getDownloader().download(getString(R.string.download_py), url, path, new Downloader.Callback() {
+                                        NStorage.setSP(App.getContext(), KEY_RES, vercode);
+                                        // UNZIP resources && install
+                                        try {
+                                            releaseQPycRes(installer.getAbsolutePath());
 
-                                @Override
-                                public void pending(String name) {
-                                    mLoadingDialog.cancel();
+                                        } catch (Exception e) {
 
-                                    new AlertDialog.Builder(getActivity(), R.style.MyDialog)
-                                            .setTitle(R.string.notice)
-                                            .setMessage(R.string.download_progress_need_sometime)
-                                            //.setNegativeButton(R.string.cancel, (dialog1, which) -> dialog1.dismiss())
-                                            .setPositiveButton(R.string.ok, (dialog1, which) -> {
-                                            })
-                                            .create()
-                                            .show();
-                                }
-
-                                @Override
-                                public void complete(String name, File installer) {
-
-                                    Log.d(TAG, "getQPYC:complete:" + name + "[" + installer.getAbsolutePath() + "]");
-                                    mLoadingDialog.dismiss();
-
-                                    NStorage.setSP(App.getContext(),KEY_RES, vercode);
-                                    // UNZIP resources && install
-                                    try {
-                                        releaseQPycRes(installer.getAbsolutePath());
-
-                                    } catch (Exception e) {
-
+                                        }
                                     }
-                                }
 
-                                @Override
-                                public void error(String err) {
-                                    mLoadingDialog.cancel();
-                                    try {
-                                        Toast.makeText(getActivity(), err, Toast.LENGTH_SHORT).show();
-                                    } catch (Exception e) {
+                                    @Override
+                                    public void error(String err) {
+                                        mLoadingDialog.cancel();
+                                        try {
+                                            Toast.makeText(getActivity(), err, Toast.LENGTH_SHORT).show();
+                                        } catch (Exception e) {
 
+                                        }
                                     }
-                                }
-                            });
+                                });
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            @Override
-            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-                // waitingWindow.dismiss();
-                Log.d(TAG, "Error in getQPYC:" + throwable.getMessage());
-            }
-        });
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                        // waitingWindow.dismiss();
+                        Log.d(TAG, "Error in getQPYC:" + throwable.getMessage());
+                    }
+                });
     }
 
     private boolean isQPycRelease(boolean ispy2compatible) {
         boolean isRelease = true;
-        String[] py3Mp3File = getActivity().getResources().getStringArray(ispy2compatible?R.array.qpy2compatible_zip:R.array.qpy3_zip);
+        String[] py3Mp3File = getActivity().getResources().getStringArray(ispy2compatible ? R.array.qpy2compatible_zip : R.array.qpy3_zip);
         for (String s : py3Mp3File) {
-            isRelease = isRelease && new File(QPyConstants.PY_CACHE_PATH + "/" + s).exists();
+            isRelease = isRelease && new File(FileUtils.getPyCachePath(App.getContext()) + "/" + s).exists();
         }
         return isRelease;
     }
@@ -964,8 +1010,8 @@ public class SettingFragment extends PreferenceFragment {
     private void removeQPyc2Core() {
         Log.d(TAG, "removeQPyc2Core");
         String files = getActivity().getFilesDir().getAbsolutePath();
-        String[] files2del = {files+"/lib/notebook.zip", files+"/lib/python27.zip", files+"/lib/python2.7"};
-        for (int i=0;i<files2del.length;i++) {
+        String[] files2del = {files + "/lib/notebook.zip", files + "/lib/python27.zip", files + "/lib/python2.7"};
+        for (int i = 0; i < files2del.length; i++) {
             QPySDK.recursiveDelete(files2del[i]);
         }
     }
@@ -975,14 +1021,14 @@ public class SettingFragment extends PreferenceFragment {
      */
     private void extractQPyCore(Boolean ispy2Compatible) {
         QPySDK qpySDK = new QPySDK(getActivity(), getActivity());
-        File libFolder = new File(QPyConstants.ABSOLUTE_PATH, QPyConstants.PY_CACHE);
-        String[] pyMp3File = getActivity().getResources().getStringArray(ispy2Compatible?R.array.qpy2compatible_zip:R.array.qpy3_zip);
+        File libFolder = new File(FileUtils.getAbsolutePath(App.getContext()), QPyConstants.PY_CACHE);
+        String[] pyMp3File = getActivity().getResources().getStringArray(ispy2Compatible ? R.array.qpy2compatible_zip : R.array.qpy3_zip);
 
         for (String s : pyMp3File) {
 
             File unzipFile = new File(libFolder, s);
             if (s.contains("public")) {
-                File externalStorage = new File(QPyConstants.ABSOLUTE_PATH);
+                File externalStorage = new File(FileUtils.getAbsolutePath(App.getContext()));
 
                 qpySDK.extractRes(unzipFile, new File(externalStorage + "/lib"), false);
 

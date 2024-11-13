@@ -51,7 +51,7 @@ public class FileUtils {
     private FileUtils() {}
 
     public static String getScriptsRootPath(Context context){
-        return getQyPath(context) + "/sl4a/scripts/";
+        return getQyPath() + "/sl4a/scripts/";
     }
 
     public static String getCloudMapCachePath(Context context){
@@ -72,14 +72,15 @@ public class FileUtils {
 
     public static String getAbsolutePath(Context context){
 //        return context.getExternalFilesDir(null).getPath() + "/qpython";
-        return Environment.getExternalStorageDirectory().getPath() + "/qpython";
+        //return Environment.getExternalStorageDirectory().getPath() + "/qpython";
+        return context.getExternalFilesDir("").getPath();
     }
 
     public static File getPath(Context context){
         return context.getExternalFilesDir(null);
     }
 
-    public static String getQyPath(Context context){
+    public static String getQyPath(){
 //        return context.getExternalFilesDir(null).getAbsolutePath();
         return Environment.getExternalStorageDirectory().getPath();
     }

@@ -56,7 +56,7 @@ public class NotebookActivity extends BaseActivity implements View.OnClickListen
 
     private ActivityNotebookBinding mBinding;
     private String lastNotebook;
-    private static final String TOKEN = "?token=qpythonotebook";
+    private static final String TOKEN = "?token=123456";
     private SharedPreferences mSharedPreferences;
     private static final String FILE_PATH = "FILEPATH";
     public static final int REQUEST_SETTTING_CODE = 0X998;
@@ -179,8 +179,7 @@ public class NotebookActivity extends BaseActivity implements View.OnClickListen
         if (filePath==null || !filePath.contains(NotebookUtil.NOTEBOOK_DIR)) {
             return "";
         }
-        String path = filePath.substring(NotebookUtil.NOTEBOOK_DIR.length())+"";
-        return path;
+        return filePath.substring(NotebookUtil.NOTEBOOK_DIR.length())+"";
     }
 
     private void initListener() {
@@ -210,7 +209,7 @@ public class NotebookActivity extends BaseActivity implements View.OnClickListen
             lastNotebook = mSharedPreferences.getString("last_notebook", null);
             if (lastNotebook == null) {
                 String fileName = "Welcome.ipynb";
-                File file = new File(NotebookUtil.NOTEBOOK_DIR + "notebooks", fileName);
+                File file = new File(NotebookUtil.NOTEBOOK_DIR , fileName);
                 if (file.exists()) {
                     lastNotebook = file.getAbsolutePath();
                 } else {
@@ -423,7 +422,7 @@ public class NotebookActivity extends BaseActivity implements View.OnClickListen
                     public boolean OnClickListener(String name) {
                         doAction(NoteBookAction.SAVE_NOTEBOOK);
                         File file = new File(lastNotebook);
-                        File newFile = new File(NotebookUtil.NOTEBOOK_DIR + "notebooks/", name + NotebookUtil.ext);
+                        File newFile = new File(NotebookUtil.NOTEBOOK_DIR , name + NotebookUtil.ext);
                         file.renameTo(newFile);
                         lastNotebook = newFile.getAbsolutePath();
                         mBinding.toolbar.setTitle(getFileName(lastNotebook));
@@ -436,6 +435,7 @@ public class NotebookActivity extends BaseActivity implements View.OnClickListen
         }
     }
 
+    //@Override
     public void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }

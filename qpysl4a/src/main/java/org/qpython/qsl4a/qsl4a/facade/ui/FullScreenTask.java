@@ -17,8 +17,11 @@
 
 package org.qpython.qsl4a.qsl4a.facade.ui;
 
-import android.R;
+import android.app.Activity;
+import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
@@ -27,22 +30,22 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.qpython.qsl4a.R;
 import org.qpython.qsl4a.qsl4a.facade.EventFacade;
 import org.qpython.qsl4a.qsl4a.future.FutureActivityTask;
+import org.xmlpull.v1.XmlPullParser;
 
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-
-import org.json.JSONArray;
-import org.xmlpull.v1.XmlPullParser;
 
 public class FullScreenTask extends FutureActivityTask<Object> implements OnClickListener,
         OnItemClickListener, OnSeekBarChangeListener {
@@ -55,20 +58,27 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
   protected Handler mHandler = null;
   private List<Integer> mOverrideKeys;
   protected String mTitle;
+  protected int mTheme;
 
-  public FullScreenTask(String layout, String title) {
+  public FullScreenTask(String layout, String title, Integer theme) {
     super();
     mLayout = layout;
     if (title != null) {
       mTitle = title;
     } else {
-      mTitle = "SL4a";
+      mTitle = "";
+    }
+    if (theme != null) {
+      mTheme = theme;
+    } else {
+      mTheme = 0;
     }
   }
 
   @Override
   public void onCreate() {
-    // super.onCreate();
+    //super.onCreate();
+    final Activity activity = getActivity();
     if (mHandler == null) {
       mHandler = new Handler();
     }
@@ -77,15 +87,22 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
       if (mView == null) {
         StringReader sr = new StringReader(mLayout);
         XmlPullParser xml = ViewInflater.getXml(sr);
-        mView = mInflater.inflate(getActivity(), xml);
+        mView = mInflater.inflate(activity, xml);
       }
     } catch (Exception e) {
-      mInflater.getErrors().add(e.toString());
-      mView = defaultView();
-      mInflater.setIdList(R.id.class);
+      String E = e.toString();
+      mInflater.getErrors().add(E);
+      mView = defaultView(E);
+      mInflater.setIdList(android.R.id.class);
     }
-    getActivity().setContentView(mView);
-    getActivity().setTitle(mTitle);
+    //activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
+    activity.setTheme(mTheme);
+    activity.setContentView(mView);
+    activity.setTitle(mTitle);
+    if(mTitle.equals(""))
+      setTaskDescription(R.string.future_activity);
+    else
+      setTaskDescription(mTitle);
     mInflater.setClickListener(mView, this, this, this);
     mShowLatch.countDown();
   }
@@ -97,15 +114,16 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
   }
 
   /** default view in case of errors */
-  protected View defaultView() {
-    LinearLayout result = new LinearLayout(getActivity());
+  protected View defaultView(String Error) {
+    final Activity activity = getActivity();
+    LinearLayout result = new LinearLayout(activity);
     result.setOrientation(LinearLayout.VERTICAL);
-    TextView text = new TextView(getActivity());
-    text.setText("Sample Layout");
-    result.addView(text, LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT);
-    Button b = new Button(getActivity());
-    b.setText("OK");
-    result.addView(b, LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT);
+    EditText text = new EditText(activity);
+    text.setText("Error Message :\n" + Error);
+    result.addView(text, LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+    Button OK = new Button(activity);
+    OK.setText("OK");
+    result.addView(OK, LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
     return result;
   }
 
@@ -148,6 +166,18 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
     return result;
   }
 
+  public String getViewPropery(String idName,String attr) {
+    View v = getViewByName(idName);
+    switch (attr) {
+      case "id":
+        return idName;
+      case "type":
+        return v.getClass().getSimpleName();
+      default:
+        return mInflater.getProperty(v,attr);
+    }
+  }
+
   public String setViewProperty(String idName, String property, String value) {
     View v = getViewByName(idName);
     mInflater.getErrors().clear();
@@ -173,6 +203,46 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
     mInflater.getErrors().clear();
     if (v != null) {
       SetList p = new SetList(v, items);
+      mHandler.post(p);
+      try {
+        p.mLatch.await();
+      } catch (InterruptedException e) {
+        mInflater.getErrors().add(e.toString());
+      }
+    } else {
+      return "View " + id + " not found.";
+    }
+    if (mInflater.getErrors().size() == 0) {
+      return "OK";
+    }
+    return mInflater.getErrors().get(0);
+  }
+
+  public String setListHtml(String id, JSONArray items) {
+    View v = getViewByName(id);
+    mInflater.getErrors().clear();
+    if (v != null) {
+      SetListHtml p = new SetListHtml(v, items);
+      mHandler.post(p);
+      try {
+        p.mLatch.await();
+      } catch (InterruptedException e) {
+        mInflater.getErrors().add(e.toString());
+      }
+    } else {
+      return "View " + id + " not found.";
+    }
+    if (mInflater.getErrors().size() == 0) {
+      return "OK";
+    }
+    return mInflater.getErrors().get(0);
+  }
+
+  public String setList2(String id, JSONArray items, JSONArray intRes) {
+    View v = getViewByName(id);
+    mInflater.getErrors().clear();
+    if (v != null) {
+      SetList2 p = new SetList2(v, items, intRes);
       mHandler.post(p);
       try {
         p.mLatch.await();
@@ -250,6 +320,46 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
     }
   }
 
+  private class SetListHtml implements Runnable {
+    View mView;
+    JSONArray mItems;
+    CountDownLatch mLatch = new CountDownLatch(1);
+
+    SetListHtml(View view, JSONArray items) {
+      mView = view;
+      mItems = items;
+      mLatch.countDown();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @Override
+    public void run() {
+      mInflater.setListAdapterHtml(mView, mItems);
+      mView.invalidate();
+    }
+  }
+
+  private class SetList2 implements Runnable {
+    View mView;
+    JSONArray mItems;
+    JSONArray mIntRes;
+
+    CountDownLatch mLatch = new CountDownLatch(1);
+
+    SetList2(View view, JSONArray intRes, JSONArray items) {
+      mView = view;
+      mItems = items;
+      mIntRes = intRes;
+      mLatch.countDown();
+    }
+
+    @Override
+    public void run() {
+      mInflater.setListAdapter2(mView, mIntRes, mItems);
+      mView.invalidate();
+    }
+  }
+
   private class SetLayout implements Runnable {
     String mLayout;
     CountDownLatch mLatch = new CountDownLatch(1);
@@ -281,16 +391,28 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
     }
   }
 
+  private class SetTheme implements Runnable {
+    int mSetTheme;
+    CountDownLatch mLatch = new CountDownLatch(1);
+
+    SetTheme(int theme) { mSetTheme = theme;}
+
+    @Override
+    public void run() {
+      mTheme = mSetTheme;
+      getActivity().setTheme(mSetTheme);
+      mLatch.countDown();
+    }
+  }
+
   @Override
   public boolean onKeyDown(int keyCode, KeyEvent event) {
     Map<String, String> data = new HashMap<String, String>();
     data.put("key", String.valueOf(keyCode));
     data.put("action", String.valueOf(event.getAction()));
     mEventFacade.postEvent("key", data);
-    boolean overrideKey =
-            (keyCode == KeyEvent.KEYCODE_BACK)
-                    || (mOverrideKeys == null ? false : mOverrideKeys.contains(keyCode));
-    return overrideKey;
+    return (keyCode == KeyEvent.KEYCODE_BACK)
+            || (mOverrideKeys != null && mOverrideKeys.contains(keyCode));
   }
 
   @Override
@@ -330,6 +452,16 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
     }
   }
 
+  public void setTheme(int theme) {
+    SetTheme p = new SetTheme(theme);
+    mHandler.post(p);
+    try {
+      p.mLatch.await();
+    } catch (InterruptedException e) {
+      mInflater.getErrors().add(e.toString());
+    }
+  }
+
   @Override
   public void onProgressChanged(SeekBar aview, int progress, boolean fromUser) {
     Map<String, String> data = mInflater.getViewInfo(aview);
@@ -348,6 +480,12 @@ public class FullScreenTask extends FutureActivityTask<Object> implements OnClic
   public void onStopTrackingTouch(SeekBar arg0) {
     // TODO Auto-generated method stub
 
+  }
+
+  public Bitmap getScreenShot() {
+    View v = getActivity().getWindow().getDecorView();
+    v.setDrawingCacheEnabled(true);
+    return v.getDrawingCache();
   }
 
 }

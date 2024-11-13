@@ -16,8 +16,12 @@
 
 package org.qpython.qsl4a.qsl4a.facade.ui;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.app.Service;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.os.Environment;
 import android.util.AndroidRuntimeException;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -25,39 +29,38 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.qpython.qsl4a.QSL4APP;
-import org.qpython.qsl4a.qsl4a.BaseApplication;
-import org.qpython.qsl4a.qsl4a.FileUtils;
-import org.qpython.qsl4a.qsl4a.FutureActivityTaskExecutor;
+import org.qpython.qsl4a.R;
 import org.qpython.qsl4a.qsl4a.facade.EventFacade;
 import org.qpython.qsl4a.qsl4a.facade.FacadeManager;
+import org.qpython.qsl4a.qsl4a.future.FutureActivityTaskExecutor;
 import org.qpython.qsl4a.qsl4a.interpreter.html.HtmlActivityTask;
-import org.qpython.qsl4a.qsl4a.interpreter.html.HtmlInterpreter;
 import org.qpython.qsl4a.qsl4a.jsonrpc.RpcReceiver;
 import org.qpython.qsl4a.qsl4a.rpc.Rpc;
 import org.qpython.qsl4a.qsl4a.rpc.RpcDefault;
 import org.qpython.qsl4a.qsl4a.rpc.RpcOptional;
 import org.qpython.qsl4a.qsl4a.rpc.RpcParameter;
 
-import java.io.IOException;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
 /**
  * User Interface Facade. <br>
  * <br>
  * <b>Usage Notes</b><br>
  * <br>
- * The UI facade provides access to a selection of dialog boxes for general user interaction, and
- * also hosts the {@link #webViewShow} call which allows interactive use of html pages.<br>
+ * The UI facade provides access to a selection of dialog boxes for general user interaction<br>
  * The general use of the dialog functions is as follows:<br>
  * <ol>
  * <li>Create a dialog using one of the following calls:
@@ -100,8 +103,8 @@ import org.json.JSONException;
  * You can also manipulate menu options. The menu options are available for both {@link #dialogShow}
  * and {@link #fullShow}.
  * <ul>
- * <li>{@link #clearOptionsMenu}
- * <li>{@link #addOptionsMenuItem}
+ * <li>{link clearOptionsMenu}
+ * <li>{link addOptionsMenuItem}
  * </ul>
  * <br>
  * <b>Some notes:</b><br>
@@ -131,6 +134,9 @@ public class UiFacade extends RpcReceiver {
   private final EventFacade mEventFacade;
   private List<Integer> mOverrideKeys = Collections.synchronizedList(new ArrayList<Integer>());
 
+  private final String sdcard;
+  private final Context context;
+
   public UiFacade(FacadeManager manager) {
     super(manager);
     mService = manager.getService();
@@ -139,6 +145,8 @@ public class UiFacade extends RpcReceiver {
     mOptionsMenuItems = new CopyOnWriteArrayList<UiMenuItem>();
     mEventFacade = manager.getReceiver(EventFacade.class);
     mMenuUpdated = new AtomicBoolean(false);
+    sdcard = Environment.getExternalStorageDirectory().toString();
+    context = mService.getApplicationContext();
   }
 
   /**
@@ -152,8 +160,7 @@ public class UiFacade extends RpcReceiver {
           @RpcParameter(name = "title", description = "title of the input box") @RpcDefault("Value") final String title,
           @RpcParameter(name = "message", description = "message to display above the input box") @RpcDefault("Please enter value:") final String message,
           @RpcParameter(name = "defaultText", description = "text to insert into the input box") @RpcOptional final String text,
-          @RpcParameter(name = "inputType", description = "type of input data, ie number or text") @RpcOptional final String inputType)
-          throws InterruptedException {
+          @RpcParameter(name = "inputType", description = "type of input data, ie number or text") @RpcOptional final String inputType) {
     dialogDismiss();
     mDialogTask = new AlertDialogTask(title, message);
     ((AlertDialogTask) mDialogTask).setTextInput(text);
@@ -169,6 +176,13 @@ public class UiFacade extends RpcReceiver {
     dialogDismiss();
     mDialogTask = new AlertDialogTask(title, message);
     ((AlertDialogTask) mDialogTask).setPasswordInput();
+  }
+
+  @Rpc(description = "set dialog message is a html .")
+  public void dialogSetMessageIsHtml(
+          @RpcParameter(name = "messageIsHtml") @RpcDefault("true") Boolean messageIsHtml
+  ){
+    ((AlertDialogTask) mDialogTask).setMessageIsHtml(messageIsHtml);
   }
 
   /**
@@ -190,9 +204,9 @@ public class UiFacade extends RpcReceiver {
           @RpcParameter(name = "message", description = "message to display above the input box") @RpcDefault("Please enter value:") final String message,
           @RpcParameter(name = "defaultText", description = "text to insert into the input box") @RpcOptional final String text)
           throws InterruptedException {
-    dialogCreateInput(title, message, text, "text");
-    dialogSetNegativeButtonText("Cancel");
-    dialogSetPositiveButtonText("Ok");
+    dialogCreateInput(title, message, text, "textMultiLine");
+    dialogSetNegativeButtonText(context.getString(R.string.cancel));
+    dialogSetPositiveButtonText(context.getString(R.string.ok));
     dialogShow();
     Map<String, Object> response = (Map<String, Object>) dialogGetResponse();
     if ("positive".equals(response.get("which"))) {
@@ -209,8 +223,8 @@ public class UiFacade extends RpcReceiver {
           @RpcParameter(name = "message", description = "message to display above the input box") @RpcDefault("Please enter password:") final String message)
           throws InterruptedException {
     dialogCreatePassword(title, message);
-    dialogSetNegativeButtonText("Cancel");
-    dialogSetPositiveButtonText("Ok");
+    dialogSetNegativeButtonText(context.getString(R.string.cancel));
+    dialogSetPositiveButtonText(context.getString(R.string.ok));
     dialogShow();
     Map<String, Object> response = (Map<String, Object>) dialogGetResponse();
     if ("positive".equals(response.get("which"))) {
@@ -343,6 +357,15 @@ public class UiFacade extends RpcReceiver {
     }
   }
 
+  @Rpc(description = "Set progress dialog message .")
+  public void dialogSetProgressMessage(@RpcParameter(name = "message") String message) {
+    if (mDialogTask != null && mDialogTask instanceof ProgressDialogTask) {
+      ((ProgressDialog) mDialogTask.getDialog()).setMessage(message);
+    } else {
+      throw new RuntimeException("No valid dialog to set message .");
+    }
+  }
+
   @Rpc(description = "Set alert dialog positive button text.")
   public void dialogSetPositiveButtonText(@RpcParameter(name = "text") String text) {
     if (mDialogTask != null && mDialogTask instanceof AlertDialogTask) {
@@ -442,10 +465,10 @@ public class UiFacade extends RpcReceiver {
     }
   }
 
-  /**
+  /* *
    * See <a href=http://code.google.com/p/android-scripting/wiki/UsingWebView>wiki page</a> for more
    * detail.
-   */
+   * /
   @Rpc(description = "Display a WebView with the given URL.")
   public void webViewShow(
           @RpcParameter(name = "url") String url,
@@ -466,9 +489,9 @@ public class UiFacade extends RpcReceiver {
     }
   }
 
-  /**
-   * Context menus are used primarily with {@link #webViewShow}
-   */
+  /* *
+   * Context menus are used primarily with {webViewShow}
+   * /
   @Rpc(description = "Adds a new item to context menu.")
   public void addContextMenuItem(
           @RpcParameter(name = "label", description = "label for this menu item") String label,
@@ -501,7 +524,7 @@ public class UiFacade extends RpcReceiver {
    * print "And done."
    *
    * </pre>
-   */
+   * /
   @Rpc(description = "Adds a new item to options menu.")
   public void addOptionsMenuItem(
           @RpcParameter(name = "label", description = "label for this menu item") String label,
@@ -521,7 +544,7 @@ public class UiFacade extends RpcReceiver {
   public void clearOptionsMenu() {
     mOptionsMenuItems.clear();
     mMenuUpdated.set(true);
-  }
+  }*/
 
   public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
     for (UiMenuItem item : mContextMenuItems) {
@@ -553,7 +576,8 @@ public class UiFacade extends RpcReceiver {
   @Rpc(description = "Show Full Screen.")
   public List<String> fullShow(
           @RpcParameter(name = "layout", description = "String containing View layout") String layout,
-          @RpcParameter(name = "title", description = "Activity Title") @RpcOptional String title)
+          @RpcParameter(name = "title", description = "Activity Title") @RpcOptional String title,
+          @RpcParameter(name = "theme", description = "Activity Theme") @RpcOptional Integer theme)
           throws InterruptedException {
     if (mFullScreenTask != null) {
       // fullDismiss();
@@ -561,8 +585,11 @@ public class UiFacade extends RpcReceiver {
       if (title != null) {
         mFullScreenTask.setTitle(title);
       }
+      if (theme != null) {
+        mFullScreenTask.setTheme(theme);
+      }
     } else {
-      mFullScreenTask = new FullScreenTask(layout, title);
+      mFullScreenTask = new FullScreenTask(layout, title, theme);
       mFullScreenTask.setEventFacade(mEventFacade);
       mFullScreenTask.setUiFacade(this);
       mFullScreenTask.setOverrideKeys(mOverrideKeys);
@@ -597,7 +624,33 @@ public class UiFacade extends RpcReceiver {
     return mFullScreenTask.getViewDetail(id);
   }
 
-  @Rpc(description = "Set fullscreen widget property")
+  @Rpc(description = "Get a fullscreen property for a specific widget")
+  public String fullGetProperty(
+          @RpcParameter(name = "id", description = "id of layout widget") String id,
+          @RpcParameter(name = "property", description = "property of layout widget") String property)
+          throws JSONException {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    return mFullScreenTask.getViewPropery(id,property);
+  }
+
+  @Rpc(description = "Get a fullscreen property for many specific widgets")
+  public JSONArray fullGetProperties(
+          @RpcParameter(name = "ids", description = "ids of layout widgets") JSONArray ids,
+          @RpcParameter(name = "property", description = "property of layout widgets") String property)
+          throws JSONException {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    JSONArray rst = new JSONArray();
+    for (int i = 0; i < ids.length(); i++) {
+      rst.put(mFullScreenTask.getViewPropery(ids.get(i).toString(),property));
+    }
+    return rst;
+  }
+
+  @Rpc(description = "Set a fullscreen widget's a property")
   public String fullSetProperty(
           @RpcParameter(name = "id", description = "id of layout widget") String id,
           @RpcParameter(name = "property", description = "name of property to set") String property,
@@ -608,7 +661,25 @@ public class UiFacade extends RpcReceiver {
     return mFullScreenTask.setViewProperty(id, property, value);
   }
 
-  @Rpc(description = "Attach a list to a fullscreen widget")
+  @Rpc(description = "Set many fullscreen widgets' a property")
+  public String fullSetProperties(
+          @RpcParameter(name = "ids", description = "ids of layout widgets") JSONArray ids,
+          @RpcParameter(name = "property", description = "name of property to set") String property,
+          @RpcParameter(name = "value", description = "value to set property to") String value)
+          throws JSONException {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    String rst;
+      for (int i = 0; i < ids.length(); i++) {
+      rst = mFullScreenTask.setViewProperty(ids.get(i).toString(), property, value);
+      if (!rst.equals("OK"))
+        return rst;
+    }
+    return "OK";
+  }
+
+    @Rpc(description = "Attach a text list to a fullscreen widget")
   public String fullSetList(
           @RpcParameter(name = "id", description = "id of layout widget") String id,
           @RpcParameter(name = "list", description = "List to set") JSONArray items) {
@@ -616,6 +687,27 @@ public class UiFacade extends RpcReceiver {
       throw new RuntimeException("No screen displayed.");
     }
     return mFullScreenTask.setList(id, items);
+  }
+
+  @Rpc(description = "Attach a html list to a fullscreen widget")
+  public String fullSetListHtml(
+          @RpcParameter(name = "id", description = "id of layout widget") String id,
+          @RpcParameter(name = "list", description = "List to set") JSONArray items) {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    return mFullScreenTask.setListHtml(id, items);
+  }
+
+  @Rpc(description = "Attach a 2-line list to a fullscreen widget")
+  public String fullSetList2(
+          @RpcParameter(name = "id", description = "id of layout widget") String id,
+          @RpcParameter(name = "list", description = "List to set") JSONArray items,
+          @RpcParameter(name = "intRes", description = "integers of list resource") JSONArray intRes) {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    return mFullScreenTask.setList2(id, items, intRes);
   }
 
   @Rpc(description = "Set the Full Screen Activity Title")
@@ -693,4 +785,25 @@ public class UiFacade extends RpcReceiver {
       };
     }
   }
+
+  @SuppressLint("SimpleDateFormat")
+  @Rpc(description = "Get the Full Screen Activity ScreenShot to path .")
+  public String fullGetScreenShot(
+          @RpcParameter(name = "path") @RpcOptional String path) throws Exception {
+    if (mFullScreenTask == null) {
+      throw new RuntimeException("No screen displayed.");
+    }
+    if (path == null) {
+      path = sdcard + "/Pictures/Screenshots/"; /*存放截屏的文件夹*/
+      File _path = new File(path);
+      if (!_path.exists()) {
+        _path.mkdirs();
+      }
+      path += new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date()) + ".jpg";//图片命名
+    }
+    Bitmap bmp = mFullScreenTask.getScreenShot();
+    bmp.compress(Bitmap.CompressFormat.JPEG,100,new FileOutputStream(path));
+    return path;
+  }
+
 }

@@ -43,6 +43,9 @@ public class QrCodeActivity extends AppCompatActivity implements ZXingScannerVie
         toolbar.setNavigationIcon(R.drawable.ic_back);
         toolbar.setNavigationOnClickListener(v -> finish());
         mScannerView = (ZXingScannerView) findViewById(R.id.scanner);
+        //闪光灯
+        mScannerView.setOnClickListener(view -> mScannerView.setFlash(!mScannerView.getFlash()));
+        Toast.makeText(this,R.string.click_light,Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -81,7 +84,7 @@ public class QrCodeActivity extends AppCompatActivity implements ZXingScannerVie
                     .show();
 
         } else if (scanResult.startsWith("qwe://")) {
-            // start the qpy.io editor
+            // start the qpython editor
             if (scanResult.contains("token=")) {
                 String qweLink = scanResult.replace("qwe://", "http://") + "&ip=" + NUtil.getIPAddress(true) + ":10000";
                 Map<String, List<String>> ps = NUtil.getQueryParams(qweLink);
@@ -89,7 +92,7 @@ public class QrCodeActivity extends AppCompatActivity implements ZXingScannerVie
                 if (ps.get("token") != null) {
                     token = ps.get("token").get(0);
                 }
-                ScriptExec.getInstance().playScript(this,getApplicationContext().getFilesDir() + "/bin/qedit4web.py", token, false);
+                ScriptExec.getInstance().playScript(this,getApplicationContext().getFilesDir() + "/bin/qedit4web.py", token);
                 QBaseApp.getInstance().getAsyncHttpClient().get(this, qweLink, null, new AsyncHttpResponseHandler() {
 
                     @Override

@@ -2,7 +2,6 @@ package com.quseit.base;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.Environment;
 
 import com.loopj.android.http.AsyncHttpClient;
 import com.quseit.config.BASE_CONF;
@@ -51,7 +50,7 @@ public class QBaseApp {
     public String getOrCreateRoot(Context context, String subDir) {
 //	    String path = Environment.getExternalStorageDirectory().getAbsolutePath()+ (root==null?BASE_CONF.DEFAULT_ROOT:root)
 //        FileUtils.createTestDir(context,"test");
-        String path = FileUtils.getQyPath(context) + (root == null ? BASE_CONF.DEFAULT_ROOT : root)
+        String path = FileUtils.getQyPath() + (root == null ? BASE_CONF.DEFAULT_ROOT : root)
                 + (subDir != null
                 ? ("/" + subDir)
                 : "");

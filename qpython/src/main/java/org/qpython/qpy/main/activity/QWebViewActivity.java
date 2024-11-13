@@ -1,5 +1,6 @@
 package org.qpython.qpy.main.activity;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
@@ -17,6 +18,8 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebBackForwardList;
@@ -32,6 +35,7 @@ import java.net.URL;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.quseit.base.QBaseApp;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NUtil;
 
@@ -160,12 +164,18 @@ public class QWebViewActivity extends BaseActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = DataBindingUtil.setContentView(this, R.layout.activity_qwebview);
         receiver = new DownloadNotebookReceiver();
 
         Intent i = getIntent();
         String title = i.getStringExtra(TITLE);
         String type = i.getStringExtra(TYPE);
+
+        if (title != null && title.equals("")){
+            requestWindowFeature(Window.FEATURE_NO_TITLE);
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_qwebview);
+
         if (launchScript == null || launchScript.isEmpty())
             launchScript = i.getStringExtra(LOG_PATH);
 
@@ -175,9 +185,15 @@ public class QWebViewActivity extends BaseActivity {
 
         if (title != null) {
             setTitle(title);
+            if (title.equals("")){
+                binding.lt.getRoot().setVisibility(View.GONE);
+            }
         } else {
             setTitle(R.string.app_name);
         }
+
+        binding.wv.getSettings().setSupportZoom(true);
+        binding.wv.getSettings().setBuiltInZoomControls(true);
 
         switch (type == null ? "" : type) {
             case HTML:
@@ -211,6 +227,7 @@ public class QWebViewActivity extends BaseActivity {
         return true;
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -224,16 +241,17 @@ public class QWebViewActivity extends BaseActivity {
                 if (launchScript.contains("/scripts")) {
                     String proj = new File(launchScript).getName();
 
-                    resultIntent.putExtra(LogActivity.LOG_PATH, QPyConstants.ABSOLUTE_LOG);
+                    resultIntent.putExtra(LogActivity.LOG_PATH, FileUtils.getAbsoluteLogPath(App.getContext()));
                     resultIntent.putExtra(LogActivity.LOG_TITLE, proj);
                 } else {
                     String proj = new File(launchScript).getParentFile().getName();
-                    resultIntent.putExtra(LogActivity.LOG_PATH, QPyConstants.ABSOLUTE_LOG);
+                    resultIntent.putExtra(LogActivity.LOG_PATH, FileUtils.getAbsoluteLogPath(App.getContext()));
                     resultIntent.putExtra(LogActivity.LOG_TITLE, proj);
                 }
 
                 startActivity(resultIntent);
                 break;
+            default:break;
         }
         return true;
     }
@@ -295,7 +313,7 @@ public class QWebViewActivity extends BaseActivity {
     }
 
     private void writeWebLog(String data) {
-        FileHelper.writeToFile(QPyConstants.ABSOLUTE_LOG,data+"\n", true);
+        FileHelper.writeToFile(FileUtils.getAbsoluteLogPath(App.getContext()),data+"\n", true);
     }
 
     //
@@ -359,8 +377,7 @@ public class QWebViewActivity extends BaseActivity {
 
             @Override
             public void onProgressChanged(WebView view, int progress) {// 载入进度改变而触发
-                if (binding.WebViewProgress != null)
-                    binding.WebViewProgress.setProgress(binding.wv.getProgress());
+                binding.WebViewProgress.setProgress(binding.wv.getProgress());
                 super.onProgressChanged(view, progress);
             }
 

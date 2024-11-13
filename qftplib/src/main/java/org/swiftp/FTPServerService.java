@@ -21,10 +21,14 @@ package org.swiftp;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -63,6 +67,7 @@ public abstract class FTPServerService extends Service implements Runnable {
     // because we cannot wait forever in accept() if we want to be able
     // to receive an exit signal and cleanly exit.
     public static final int WAKE_INTERVAL_MS = 1000; // milliseconds
+    private static final int WIFI_AP_STATE_ENABLED = 13;
     protected static Thread serverThread = null;
     protected static MyLog staticLog = new MyLog(FTPServerService.class.getName());
     protected static WifiLock wifiLock = null;
@@ -126,6 +131,27 @@ public abstract class FTPServerService extends Service implements Runnable {
         }
     }
 
+    public static InetAddress getWifiAndApIp(){
+        InetAddress ip = getWifiIp();
+        if (ip==null){
+            try {
+                for (NetworkInterface intf : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                    if (intf.getName().equals("wlan0")){
+                        for (InetAddress addr : Collections.list(intf.getInetAddresses())) {
+                            if (!addr.isLoopbackAddress() && addr.getHostAddress().contains(".")){
+                                ip = addr;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            } catch (SocketException ignored) {
+            }
+        }
+        return ip;
+    }
+
     public static boolean isWifiEnabled() {
         Context myContext = Globals.getContext();
         if (myContext == null) {
@@ -137,6 +163,25 @@ public abstract class FTPServerService extends Service implements Runnable {
             return true;
         } else {
             return false;
+        }
+    }
+
+    public static boolean isWifiAndApEnabled(){
+        Context myContext = Globals.getContext();
+        if (myContext == null) {
+            throw new NullPointerException("Global context is null");
+        }
+        @SuppressLint("WifiManagerLeak") WifiManager wifiMgr = (WifiManager) myContext
+                .getSystemService(Context.WIFI_SERVICE);
+        if (wifiMgr.getWifiState() == WifiManager.WIFI_STATE_ENABLED) {
+            return true;
+        } else {
+            try {
+                Method method = wifiMgr.getClass().getMethod("getWifiApState");
+                return (Integer) method.invoke(wifiMgr) == WIFI_AP_STATE_ENABLED;
+            } catch (Exception e){
+                return false;
+            }
         }
     }
 
@@ -335,7 +380,7 @@ public abstract class FTPServerService extends Service implements Runnable {
         CharSequence contentText = getString(R.string.notif_text);
         Intent notificationIntent = new Intent(this, getSettingClass());
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, 0);
+                notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification notification;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
@@ -398,7 +443,7 @@ public abstract class FTPServerService extends Service implements Runnable {
             return;
         }
 
-        if (!isWifiEnabled()) {
+        if (!isWifiAndApEnabled()) {
             cleanupAndStopService();
             sendBroadcast(new Intent(ACTION_FAILEDTOSTART));
             return;

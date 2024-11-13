@@ -6,6 +6,7 @@
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false"/>
+    <uses-sdk tools:overrideLibrary="com.huawei.agconnect.credential,com.huawei.agconnect.core,com.huawei.agconnect.https,com.huawei.agconnect.datastore"/>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -19,8 +20,6 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_USER_PRESENT" />
     <uses-permission android:name="com.android.vending.BILLING"/>
-    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
-    <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_STORAGE" />
@@ -35,6 +34,29 @@
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES"/>
     <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
 
+
+    <!--快捷方式开始-->
+    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" /><!-- 添加快捷方式 -->
+    <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" /><!-- 移除快捷方式 -->
+    <uses-permission android:name="android.permission.INSTALL_SHORTCUT" />
+    <uses-permission android:name="android.permission.UNINSTALL_SHORTCUT" />
+    <!-- 查询快捷方式2.1以下 -->
+    <uses-permission android:name="com.android.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.android.launcher.permission.WRITE_SETTINGS" />
+    <!-- 查询快捷方式4.4及以下 -->
+    <uses-permission android:name="com.android.launcher2.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.android.launcher2.permission.WRITE_SETTINGS" />
+    <!-- 查询快捷方式4.4以上 -->
+    <uses-permission android:name="com.android.launcher3.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.android.launcher3.permission.WRITE_SETTINGS" />
+    <!--快捷方式结束-->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <!--小米通知权限 start- ->
+    <permission android:name="org.qpython.qpy.permission.MIPUSH_RECEIVE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="org.qpython.qpy.permission.MIPUSH_RECEIVE" />
+    <!- -小米通知权限 end-->
+
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
@@ -42,7 +64,7 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false"/>
     <uses-feature android:name="android.hardware.screen.landscape" android:required="false"/>
     <uses-feature android:name="android.hardware.wifi" android:required="false"/>
-    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+
     <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
     <uses-feature android:name="android.hardware.location.network" android:required="false"/>
     <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
@@ -50,6 +72,8 @@
     <uses-feature android:glEsVersion="0x00020000" android:required="false"/>
 
     <application
+        android:extractNativeLibs="true"
+        android:requestLegacyExternalStorage="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:name="org.qpython.qpy.main.app.App"
         android:allowBackup="true"
@@ -68,6 +92,8 @@
         <service android:name=".main.service.QPyService"/>
         <service android:name="org.qpython.qsl4a.QPyScriptService"/>
         <service android:name=".main.service.FTPServerService"/>
+
+
         <activity
             android:name=".main.activity.SignInActivity"
             android:launchMode="singleTask"/>
@@ -95,6 +121,7 @@
         <activity
             android:name=".main.activity.SplashActivity"
             android:theme="@style/FullscreenTheme"
+            android:exported="true"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -111,7 +138,41 @@
         </activity>
 
         <activity
+            android:label="视频播放器"
+            android:name=".main.activity.VideoActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:label="@string/float_view"
+            android:name=".main.activity.FloatViewActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:launchMode="singleTask"
+            android:documentLaunchMode="intoExisting"
+            android:exported="true"
+            android:maxRecents="1">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
             android:name="org.qpython.qpy.main.activity.QWebViewActivity"
+            android:exported="true"
             android:label="@string/browser">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -198,6 +259,7 @@
 
         <activity
             android:name=".main.activity.LibActivity"
+            android:exported="true"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar">
             <intent-filter>
                 <action android:name="org.qpython.qpy.OPEN_AIPY_FRAGMENT"/>
@@ -236,6 +298,7 @@
         <activity
             android:name="org.qpython.qpy.console.RemoteInterface"
             android:excludeFromRecents="true"
+            android:exported="false"
             android:theme="@style/ConsoleTheme">
             <intent-filter>
                 <action android:name="jackpal.androidterm.OPEN_NEW_WINDOW"/>
@@ -251,9 +314,11 @@
         </activity-alias>
 
         <activity
-            android:name="org.qpython.qsl4a.qsl4a.activity.FutureActivity"
-            android:label="QSL4A FutureActivity"
-            android:theme="@style/AppTheme">
+            android:name="org.qpython.qsl4a.qsl4a.future.FutureActivity"
+            android:label="@string/qsl4a_future"
+            android:theme="@style/AppTheme"
+            android:exported="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -264,6 +329,7 @@
         <activity
             android:name="org.qpython.qpy.console.RunScript"
             android:excludeFromRecents="true"
+            android:exported="true"
             android:permission="jackpal.androidterm.permission.RUN_SCRIPT"
             android:theme="@style/ConsoleTheme">
             <intent-filter>
@@ -274,6 +340,7 @@
         <activity
             android:name="org.qpython.qpy.console.RunShortcut"
             android:excludeFromRecents="true"
+            android:exported="true"
             android:theme="@style/ConsoleTheme">
             <intent-filter>
                 <action android:name="jackpal.androidterm.RUN_SHORTCUT"/>
@@ -293,6 +360,7 @@
             android:configChanges="orientation|keyboard|keyboardHidden"
             android:label="@string/activity_shortcut_create"
             android:launchMode="singleTop"
+            android:exported="true"
             android:theme="@style/Theme.AppCompat">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -331,6 +399,7 @@
 
         <!--zxing-->
         <activity android:name="org.qpython.qpy.main.activity.QrCodeActivity"/>
+        <activity android:name="org.qpython.qpy.main.activity.QrCodeActivityRstOnly"/>
         <activity
             android:name=".main.activity.GistActivity"
             android:configChanges="orientation"
@@ -343,6 +412,7 @@
             android:configChanges="orientation"/>
         <!--SERVICE-->
         <service android:name="org.qpython.qpy.console.TermService"
+            android:exported="true"
                  tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="jackpal.androidterm.action.START_TERM.v1"/>
@@ -367,10 +437,102 @@
             android:configChanges="keyboardHidden|orientation|screenSize"/>
 
         <receiver android:name="org.qpython.qpy.main.receiver.BootBroadcastReceiver" />
+        <receiver android:name="org.qpython.qsl4a.qsl4a.facade.AndroidFacade$NotificationClickReceiver"/>
+
+        <!--华为通知（start）-->
+        <service
+            android:name=".service.HmsMessageService" android:exported="false">
+            <intent-filter>
+                <action android:name="com.huawei.push.action.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="push_kit_auto_init_enabled"
+            android:value="false"/>
+
+        <meta-data
+            android:name="com.huawei.agconnect.AccessNetwork"
+            android:value="false" /><!--华为分析，默认关闭网络连接-->
+        <!--华为通知(end)-->
+
+        <!--小米通知权限 start-->
+        <service
+            android:name="com.xiaomi.push.service.XMPushService"
+            android:enabled="true"
+            android:process=":pushservice" />
+
+        <!--注：此service必须在3.0.1版本以后（包括3.0.1版本）加入-->
+        <service
+            android:name="com.xiaomi.push.service.XMJobService"
+            android:enabled="true"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:process=":pushservice" />
+
+        <!--注：com.xiaomi.xmsf.permission.MIPUSH_RECEIVE这里的包名不能改为app的包名- ->
+        <service
+            android:name="com.xiaomi.mipush.sdk.PushMessageHandler"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="com.xiaomi.xmsf.permission.MIPUSH_RECEIVE" />
+
+        <!- -注：此service必须在2.2.5版本以后（包括2.2.5版本）加入- ->
+        <service
+            android:name="com.xiaomi.mipush.sdk.MessageHandleService"
+            android:enabled="true" />
+
+        <receiver
+            android:name="com.xiaomi.push.service.receivers.NetworkStatusReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.xiaomi.push.service.receivers.PingReceiver"
+            android:exported="false"
+            android:process=":pushservice">
+            <intent-filter>
+                <action android:name="com.xiaomi.push.PING_TIMER" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:exported="true"
+            android:name="org.qpython.qpy.service.MiPushMessageReceiver">
+            <!- -这里com.xiaomi.mipushdemo.DemoMessageRreceiver改成app中定义的完整类名- ->
+            <intent-filter>
+                <action android:name="com.xiaomi.mipush.RECEIVE_MESSAGE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.xiaomi.mipush.MESSAGE_ARRIVED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.xiaomi.mipush.ERROR" />
+            </intent-filter>
+        </receiver>
+        <!- -小米通知权限 end-->
+
+        <!--友盟-->
+        <meta-data
+            android:name="UMENG_APPKEY"
+            android:value="5a24fdea8f4a9d34b00000b5"/>
+        <meta-data
+            android:name="UMENG_CHANNEL"
+            android:value="QPython"/>
+
     </application>
 
-    <meta-data
-        android:name="com.sec.android.support.multiwindow"
-        android:value="true"/>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+    </queries>
 
 </manifest>

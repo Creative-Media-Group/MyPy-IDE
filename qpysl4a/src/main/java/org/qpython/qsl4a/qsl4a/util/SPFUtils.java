@@ -12,8 +12,6 @@ import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
-import android.os.Build;
-import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.UUID;
@@ -66,9 +64,9 @@ public class SPFUtils {
     }
 
     public static Notification getNotification(Context context, String contentTitle, String contentText, PendingIntent intent,
-                                               int smallIconId, Bitmap largeIconId, int flags) {
+                                               int smallIconId, Bitmap largeIconId) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel chan = new NotificationChannel(context.getPackageName(), contentTitle, NotificationManager.IMPORTANCE_NONE);
+            NotificationChannel chan = new NotificationChannel(context.getPackageName(), contentTitle, NotificationManager.IMPORTANCE_DEFAULT);
 
             chan.setLightColor(Color.BLUE);
             chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
@@ -76,7 +74,7 @@ public class SPFUtils {
             assert manager != null;
             manager.createNotificationChannel(chan);
 
-            Notification notification = new Notification.Builder(context, context.getPackageName()) //new Notification(icon, tickerText, when);
+            return new Notification.Builder(context, context.getPackageName()) //new Notification(icon, tickerText, when);
                     .setTicker(contentTitle)
                     .setContentTitle(contentTitle)
                     .setContentText(contentText)
@@ -85,38 +83,17 @@ public class SPFUtils {
                     .setAutoCancel(true)
                     .setContentIntent(intent)
                     .build();
-
-            return notification;
-        } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            Notification notification = new Notification.Builder(context) //new Notification(icon, tickerText, when);
-                    .setTicker(contentTitle)
-                    .setContentTitle(contentTitle)
-                    .setContentText(contentText)
-                    .setSmallIcon(smallIconId)
-                    .setLargeIcon(largeIconId)
-                    .setAutoCancel(true)
-                    .setContentIntent(intent)
-                    .build();
-
-            return notification;
-        } else if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB){
-            Notification notification = new Notification.Builder(context) //new Notification(icon, tickerText, when);
-                    .setTicker(contentTitle)
-                    .setContentTitle(contentTitle)
-                    .setContentText(contentText)
-                    .setSmallIcon(smallIconId)
-                    .setSmallIcon(smallIconId)
-                    .setLargeIcon(largeIconId)
-                    .setAutoCancel(true)
-                    .setContentIntent(intent)
-                    .getNotification();
-            return notification;
         } else {
-            Notification notification = new Notification(smallIconId, contentTitle, System.currentTimeMillis());
-            notification.tickerText = contentTitle;
-            notification.contentIntent = intent;
-            notification.flags |= flags;
-            return null;
+
+            return new Notification.Builder(context) //new Notification(icon, tickerText, when);
+                    .setTicker(contentTitle)
+                    .setContentTitle(contentTitle)
+                    .setContentText(contentText)
+                    .setSmallIcon(smallIconId)
+                    .setLargeIcon(largeIconId)
+                    .setAutoCancel(true)
+                    .setContentIntent(intent)
+                    .build();
         }
     }
 

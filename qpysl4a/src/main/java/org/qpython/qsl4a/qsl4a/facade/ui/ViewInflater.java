@@ -17,15 +17,23 @@
 
 package org.qpython.qsl4a.qsl4a.facade.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
+import android.text.Html;
 import android.text.InputType;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.method.DigitsKeyListener;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -39,12 +47,18 @@ import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.qpython.qsl4a.qsl4a.LogUtil;
+import org.qpython.qsl4a.qsl4a.util.HtmlUtil;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,14 +73,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.json.JSONArray;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-
 public class ViewInflater {
   private static XmlPullParserFactory mFactory;
-  public static final String ANDROID = "http://schemas.android.com/apk/res/android";
+  //public static final String ANDROID = "http://schemas.android.com/apk/res/android";
+  //public static final String QPYTHON = "http://www.qpython.org";
   public static final int BASESEQ = 0x7f0f0000;
   private int mNextSeq = BASESEQ;
   private final Map<String, Integer> mIdList = new HashMap<String, Integer>();
@@ -76,6 +86,7 @@ public class ViewInflater {
   private static final Map<String, Integer> mInputTypes = new HashMap<String, Integer>();
   public static final Map<String, String> mColorNames = new HashMap<String, String>();
   public static final Map<String, Integer> mRelative = new HashMap<String, Integer>();
+
   static {
     mColorNames.put("aliceblue", "#f0f8ff");
     mColorNames.put("antiquewhite", "#faebd7");
@@ -291,7 +302,7 @@ public class ViewInflater {
   }
 
   @SuppressWarnings("rawtypes")
-  public void setClickListener(View v, android.view.View.OnClickListener listener,
+  public void setClickListener(View v, View.OnClickListener listener,
                                OnItemClickListener itemListener, SeekBar.OnSeekBarChangeListener seekbarListener) {
     if (v.isClickable()) {
 
@@ -330,7 +341,7 @@ public class ViewInflater {
     while ((event = xml.next()) != XmlPullParser.END_DOCUMENT) {
       switch (event) {
         case XmlPullParser.START_TAG:
-          if (view == null || view instanceof ViewGroup) {
+          if (/*view == null ||*/ view instanceof ViewGroup) {
             inflateView(context, xml, (ViewGroup) view);
           } else {
             skipTag(xml); // Not really a view, probably, skip it.
@@ -359,11 +370,10 @@ public class ViewInflater {
     if (view != null) {
       getLayoutParams(view, root); // Make quite sure every view has a layout param.
       for (int i = 0; i < xml.getAttributeCount(); i++) {
-        String ns = xml.getAttributeNamespace(i);
+        //String ns = xml.getAttributeNamespace(i);
         String attr = xml.getAttributeName(i);
-        if (ANDROID.equals(ns)) {
+        //if (ANDROID.equals(ns) || QPYTHON.equals(ns))
           setProperty(view, root, attr, xml.getAttributeValue(i));
-        }
       }
       if (root != null) {
         root.addView(view);
@@ -378,7 +388,7 @@ public class ViewInflater {
       return 0;
     }
     if (value.equals("match_parent")) {
-      return LayoutParams.FILL_PARENT;
+      return LayoutParams.MATCH_PARENT;
     }
     if (value.equals("wrap_content")) {
       return LayoutParams.WRAP_CONTENT;
@@ -467,10 +477,10 @@ public class ViewInflater {
         String lookfor = root.getClass().getName() + "$LayoutParams";
         addln(lookfor);
         Class<? extends LayoutParams> clazz = Class.forName(lookfor).asSubclass(LayoutParams.class);
-        if (clazz != null) {
+        //if (clazz != null) {
           Constructor<? extends LayoutParams> ct = clazz.getConstructor(int.class, int.class);
           result = ct.newInstance(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        }
+        //}
       } catch (Exception e) {
         result = null;
       }
@@ -489,6 +499,7 @@ public class ViewInflater {
     }
   }
 
+  @SuppressLint("WrongConstant")
   private void setProperty(View view, ViewGroup root, String attr, String value)
           throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
     addln(attr + ":" + value);
@@ -520,7 +531,7 @@ public class ViewInflater {
     } else if (attr.equals("textHighlightColor")) {
       setInteger(view, "HighlightColor", getColor(value));
     } else if (attr.equals("textColorHint")) {
-      setInteger(view, "LinkTextColor", getColor(value));
+      setInteger(view, "HintTextColor", getColor(value));
     } else if (attr.equals("textStyle")) {
       TextView textview = (TextView) view;
       int style = getInteger(Typeface.class, value);
@@ -536,7 +547,37 @@ public class ViewInflater {
       textview.setTypeface(Typeface.create(value, style));
     } else if (attr.equals("src")) {
       setImage(view, value);
-    } else {
+    } else if (attr.equals("textAllCaps")) {
+      TextView textview = (TextView) view;
+      textview.setAllCaps(Boolean.parseBoolean(value));
+    } else if (attr.startsWith("progress")) {
+      attr = attr.substring(8);
+      SeekBar seekBar = (SeekBar) view;
+      if (attr.equals("")){
+        int progress;
+        progress = Integer.valueOf(value);
+        if (seekBar.getMax()<progress)
+          seekBar.setMax(progress);
+        seekBar.setProgress(progress);
+       }
+       else {
+        LayerDrawable layerDrawable;
+        Drawable drawable;
+         if (attr.equals("Color")) {
+        int progressColor = getColor(value);
+        layerDrawable = (LayerDrawable) seekBar.getProgressDrawable();
+        drawable = layerDrawable.getDrawable(2);
+        drawable.setColorFilter(progressColor, PorterDuff.Mode.SRC);
+        drawable = seekBar.getThumb();
+        drawable.setColorFilter(progressColor, PorterDuff.Mode.SRC_ATOP);
+      }
+        seekBar.invalidate();
+       }
+    } else if (attr.equals("html")){
+      TextView textview = (TextView) view;
+      textview.setText(HtmlUtil.textToHtml(value));
+    }
+    else {
       setDynamicProperty(view, attr, value);
     }
   }
@@ -552,35 +593,45 @@ public class ViewInflater {
   private void setLayoutProperty(View view, ViewGroup root, String attr, String value) {
     LayoutParams layout = getLayoutParams(view, root);
     String layoutAttr = attr.substring(7);
-    if (layoutAttr.equals("width")) {
-      layout.width = getLayoutValue(value);
-    } else if (layoutAttr.equals("height")) {
-      layout.height = getLayoutValue(value);
-    } else if (layoutAttr.equals("gravity")) {
-      setIntegerField(layout, "gravity", getInteger(Gravity.class, value));
-    } else {
-      if (layoutAttr.startsWith("margin") && layout instanceof MarginLayoutParams) {
-        int size = (int) getFontSize(value);
-        MarginLayoutParams margins = (MarginLayoutParams) layout;
-        if (layoutAttr.equals("marginBottom")) {
-          margins.bottomMargin = size;
-        } else if (layoutAttr.equals("marginTop")) {
-          margins.topMargin = size;
-        } else if (layoutAttr.equals("marginLeft")) {
-          margins.leftMargin = size;
-        } else if (layoutAttr.equals("marginRight")) {
-          margins.rightMargin = size;
+    switch (layoutAttr) {
+      case "width":
+        layout.width = getLayoutValue(value);
+        break;
+      case "height":
+        layout.height = getLayoutValue(value);
+        break;
+      case "gravity":
+        setIntegerField(layout, "gravity", getInteger(Gravity.class, value));
+        break;
+      default:
+        if (layoutAttr.startsWith("margin") && layout instanceof MarginLayoutParams) {
+          int size = (int) getFontSize(value);
+          MarginLayoutParams margins = (MarginLayoutParams) layout;
+          switch (layoutAttr) {
+            case "marginBottom":
+              margins.bottomMargin = size;
+              break;
+            case "marginTop":
+              margins.topMargin = size;
+              break;
+            case "marginLeft":
+              margins.leftMargin = size;
+              break;
+            case "marginRight":
+              margins.rightMargin = size;
+              break;
+          }
+        } else if (layout instanceof RelativeLayout.LayoutParams) {
+          int anchor = calcId(value);
+          if (anchor == 0) {
+            anchor = getInteger(RelativeLayout.class, value);
+          }
+          int rule = mRelative.get(layoutAttr);
+          ((RelativeLayout.LayoutParams) layout).addRule(rule, anchor);
+        } else {
+          setIntegerField(layout, layoutAttr, getInteger(layout.getClass(), value));
         }
-      } else if (layout instanceof RelativeLayout.LayoutParams) {
-        int anchor = calcId(value);
-        if (anchor == 0) {
-          anchor = getInteger(RelativeLayout.class, value);
-        }
-        int rule = mRelative.get(layoutAttr);
-        ((RelativeLayout.LayoutParams) layout).addRule(rule, anchor);
-      } else {
-        setIntegerField(layout, layoutAttr, getInteger(layout.getClass(), value));
-      }
+        break;
     }
   }
 
@@ -844,7 +895,7 @@ public class ViewInflater {
   }
 
   private View viewClass(Context context, String name) {
-    View result = null;
+    View result;
     result = viewClassTry(context, "android.view." + name);
     if (result == null) {
       result = viewClassTry(context, "android.widget." + name);
@@ -859,10 +910,10 @@ public class ViewInflater {
     View result = null;
     try {
       Class<? extends View> viewclass = Class.forName(name).asSubclass(View.class);
-      if (viewclass != null) {
+      //if (viewclass != null) {
         Constructor<? extends View> ct = viewclass.getConstructor(Context.class);
         result = ct.newInstance(context);
-      }
+      //}
     } catch (Exception e) {
     }
     return result;
@@ -923,7 +974,7 @@ public class ViewInflater {
     }
   }
 
-  private String getProperty(View v, String attr) {
+  public String getProperty(View v, String attr) {
     String name = PCase(attr);
     Method m = tryMethod(v, "get" + name);
     if (m == null) {
@@ -936,9 +987,11 @@ public class ViewInflater {
         if (o != null) {
           result = o.toString();
         }
-      } catch (Exception e) {
-        result = null;
+      } catch (Exception ignored) {
       }
+    } else if (attr.equals("html")){
+      TextView tv = (TextView) v;
+      result = Html.toHtml(new SpannableString(tv.getText()));
     }
     return result;
   }
@@ -1002,18 +1055,18 @@ public class ViewInflater {
         list.add(items.get(i).toString());
       }
       ArrayAdapter<String> adapter;
+      Method m;
       if (view instanceof Spinner) {
         adapter =
-                new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_item,
+                new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item,
                         android.R.id.text1, list);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        m = view.getClass().getMethod("setAdapter",SpinnerAdapter.class);
       } else {
         adapter =
-                new ArrayAdapter<String>(mContext, android.R.layout.simple_list_item_1,
+                new ArrayAdapter<>(mContext, android.R.layout.simple_list_item_1,
                         android.R.id.text1, list);
-      }
-      adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-      Method m = tryMethod(view, "setAdapter", SpinnerAdapter.class);
-      if (m == null) {
+        //adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         m = view.getClass().getMethod("setAdapter", ListAdapter.class);
       }
       m.invoke(view, adapter);
@@ -1021,6 +1074,84 @@ public class ViewInflater {
       mErrors.add("failed to load list " + e.getMessage());
     }
   }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  public void setListAdapterHtml(View view, JSONArray items) {
+    List<String> list = new ArrayList<String>();
+    try {
+      for (int i = 0; i < items.length(); i++) {
+        list.add(items.get(i).toString());
+      }
+      ArrayAdapter<Spanned> adapter;
+      Method m;
+      Spanned[] listHtml = new Spanned[list.size()];
+      for (int i=0;i<list.size();i++)
+        listHtml[i]=HtmlUtil.textToHtml(list.get(i));
+      if (view instanceof Spinner) {
+        adapter =
+                new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item,
+                        android.R.id.text1, listHtml);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        m = view.getClass().getMethod("setAdapter",SpinnerAdapter.class);
+      } else {
+        adapter =
+                new ArrayAdapter<>(mContext, android.R.layout.simple_list_item_1,
+                        android.R.id.text1, listHtml);
+        //adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        m = view.getClass().getMethod("setAdapter", ListAdapter.class);
+      }
+      m.invoke(view, adapter);
+    } catch (Exception e) {
+      mErrors.add("failed to load list " + e.getMessage());
+    }
+  }
+
+  public void setListAdapter2(View view, JSONArray items, JSONArray intRes) {
+      try{
+    Method m;
+      if (view instanceof Spinner) {
+        m = view.getClass().getMethod("setAdapter", SpinnerAdapter.class);
+      } else {
+        m = view.getClass().getMethod("setAdapter", ListAdapter.class);
+      }
+        List<Integer> integers = new ArrayList<Integer>();
+        for (int i = 0; i < intRes.length(); i++) {
+          integers.add(intRes.getInt(i));
+        }
+        int l=intRes.length();
+        if (view instanceof Spinner || l==2) {
+          List<String> list = new ArrayList<String>();
+          ArrayAdapter<String> adapter;
+          for (int i = 0; i < items.length(); i++)
+            list.add(items.get(i).toString());
+          adapter = new ArrayAdapter<String>(mContext, integers.get(0), integers.get(1), list);
+          if (view instanceof Spinner) {
+            if (l==3) adapter.setDropDownViewResource(integers.get(2));
+            else if (l==2) adapter.setDropDownViewResource(integers.get(0));
+          }
+          m.invoke(view, adapter);
+        } else if (l==3) {
+              Map<String,String> map;
+              List<Map<String,String>> list = new ArrayList<>();
+              int j,k;
+              k=items.length();
+              for (int i = 0; i < k; i+=2) {
+                map =new HashMap<>();
+                map.put("1",items.get(i).toString());
+                j=i+1;
+                if(j<k) map.put("2",items.get(j).toString());
+                else map.put("2","");
+                list.add(map);
+              }
+              String[] Str = {"1","2"};
+              int[] Int = {integers.get(1),integers.get(2)};
+              SimpleAdapter adapter = new SimpleAdapter(mContext,list,integers.get(0),Str,Int);
+              m.invoke(view, adapter);
+          }
+    } catch (Exception e) {
+      mErrors.add("failed to load list " + e.getMessage());
+    }
+}
 
   public void clearAll() {
     getErrors().clear();

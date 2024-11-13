@@ -2,6 +2,7 @@ package org.qpython.qsl4a.qsl4a.facade;
 
 import android.app.Service;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
@@ -14,6 +15,7 @@ import org.qpython.qsl4a.qsl4a.rpc.RpcMinSdk;
 import org.qpython.qsl4a.qsl4a.rpc.RpcStartEvent;
 import org.qpython.qsl4a.qsl4a.rpc.RpcStopEvent;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
 
 /**
@@ -35,22 +37,44 @@ public class SignalStrengthFacade extends RpcReceiver {
     mEventFacade = manager.getReceiver(EventFacade.class);
     mTelephonyManager =
         (TelephonyManager) manager.getService().getSystemService(Context.TELEPHONY_SERVICE);
-    mPhoneStateListener = MainThread.run(mService, new Callable<PhoneStateListener>() {
+    mPhoneStateListener = MainThread.run(mService, (Callable<PhoneStateListener>) () -> new PhoneStateListener() {
       @Override
-      public PhoneStateListener call() throws Exception {
-        return new PhoneStateListener() {
-          @Override
-          public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-            mSignalStrengths = new Bundle();
-            mSignalStrengths.putInt("gsm_signal_strength", signalStrength.getGsmSignalStrength());
-            mSignalStrengths.putInt("gsm_bit_error_rate", signalStrength.getGsmBitErrorRate());
-            mSignalStrengths.putInt("cdma_dbm", signalStrength.getCdmaDbm());
-            mSignalStrengths.putInt("cdma_ecio", signalStrength.getCdmaEcio());
-            mSignalStrengths.putInt("evdo_dbm", signalStrength.getEvdoDbm());
-            mSignalStrengths.putInt("evdo_ecio", signalStrength.getEvdoEcio());
-            mEventFacade.postEvent("signal_strengths", mSignalStrengths.clone());
-          }
-        };
+      //旧版安卓信号强度获取方式
+      public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+        mSignalStrengths = new Bundle();
+        mSignalStrengths.putInt("gsm_signal_strength", signalStrength.getGsmSignalStrength());
+        mSignalStrengths.putInt("gsm_bit_error_rate", signalStrength.getGsmBitErrorRate());
+        mSignalStrengths.putInt("cdma_dbm", signalStrength.getCdmaDbm());
+        mSignalStrengths.putInt("cdma_ecio", signalStrength.getCdmaEcio());
+        mSignalStrengths.putInt("evdo_dbm", signalStrength.getEvdoDbm());
+        mSignalStrengths.putInt("evdo_ecio", signalStrength.getEvdoEcio());
+        mSignalStrengths.putInt("evdo_snr", signalStrength.getEvdoSnr());
+        Method method;
+        int dbm,Dbm=Integer.MAX_VALUE;
+        try {
+          method = signalStrength.getClass().getMethod("getDbm");
+          Dbm = (int) method.invoke(signalStrength);
+          mSignalStrengths.putInt("dbm", Dbm);
+        } catch (Exception ignored){}
+        String[] flags = {"Rsrp","Rsrq","Rssnr"};
+        for (String flag : flags){
+          try {
+            method = signalStrength.getClass().getDeclaredMethod("getLte"+flag);
+            method.setAccessible(true);
+            dbm = (int) method.invoke(signalStrength);
+            mSignalStrengths.putInt("lte_"+flag.toLowerCase(),dbm);
+          } catch (Exception ignored){}}
+        try {
+          method = signalStrength.getClass().getDeclaredMethod("getWcdmaEcio");
+          method.setAccessible(true);
+          dbm = (int) method.invoke(signalStrength);
+          if (dbm<0) mSignalStrengths.putInt("wcdma_rscp",Dbm);
+          else mSignalStrengths.putInt("wcdma_rscp",Integer.MAX_VALUE);
+          mSignalStrengths.putInt("wcdma_ecio",dbm);
+        } catch (Exception ignored){}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+          mSignalStrengths.putInt("level", signalStrength.getLevel());
+        mEventFacade.postEvent("signal_strengths", mSignalStrengths.clone());
       }
     });
   }
@@ -70,6 +94,22 @@ public class SignalStrengthFacade extends RpcReceiver {
   @RpcStopEvent("signal_strengths")
   public void stopTrackingSignalStrengths() {
     mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
+  }
+
+  //新版安卓信号等级获取方式
+  @Rpc(description = "Returns the Telephone Signal Strength Level .")
+  public int getTelephoneSignalStrengthLevel() throws Exception {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      return mTelephonyManager.getSignalStrength().getLevel();
+    } else throw new Exception("getTelephoneSignalStrengthLevel only support Android >= 9.0");
+  }
+
+  //新版安卓信号强度获取方式
+  @Rpc(description = "Returns the Telephone Signal Strength Detail .")
+  public String getTelephoneSignalStrengthDetail() throws Exception {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      return mTelephonyManager.getSignalStrength().toString();
+    } else throw new Exception("getTelephoneSignalStrengthDetail only support Android >= 9.0");
   }
 
   @Override

@@ -16,6 +16,8 @@
 
 package org.qpython.qsl4a.qsl4a.facade;
 
+import static android.os.Build.VERSION.SDK_INT;
+
 import android.Manifest;
 import android.app.Service;
 import android.content.ContentResolver;
@@ -23,14 +25,34 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Contacts.PhonesColumns;
+import android.support.annotation.RequiresApi;
 import android.support.annotation.RequiresPermission;
+import android.telephony.CellIdentityCdma;
+import android.telephony.CellIdentityGsm;
+import android.telephony.CellIdentityLte;
+import android.telephony.CellIdentityNr;
+import android.telephony.CellIdentityWcdma;
+import android.telephony.CellInfo;
+import android.telephony.CellInfoCdma;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellInfoLte;
+import android.telephony.CellInfoNr;
+import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
+import android.telephony.CellSignalStrengthCdma;
+import android.telephony.CellSignalStrengthGsm;
+import android.telephony.CellSignalStrengthLte;
+import android.telephony.CellSignalStrengthNr;
+import android.telephony.CellSignalStrengthWcdma;
 import android.telephony.NeighboringCellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.qpython.qsl4a.qsl4a.MainThread;
 import org.qpython.qsl4a.qsl4a.jsonrpc.RpcReceiver;
 import org.qpython.qsl4a.qsl4a.rpc.Rpc;
@@ -162,11 +184,11 @@ public class PhoneFacade extends RpcReceiver {
         phoneDial("tel:" + URLEncoder.encode(number, "ASCII"));
     }
 
-    @Rpc(description = "Returns the current cell location.")
+    /*@Rpc(description = "Returns the current cell location.")
     @RequiresPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
     public CellLocation getCellLocation() {
         return mTelephonyManager.getCellLocation();
-    }
+    }*/
 
     @Rpc(description = "Returns the numeric name (MCC+MNC) of current registered operator.")
     public String getNetworkOperator() {
@@ -178,20 +200,48 @@ public class PhoneFacade extends RpcReceiver {
         return mTelephonyManager.getNetworkOperatorName();
     }
 
+    @RequiresPermission(android.Manifest.permission.READ_PHONE_STATE)
     @Rpc(description = "Returns a the radio technology (network type) currently in use on the device.")
-    public String getNetworkType() {
+    public String getNetworkType() throws Exception {
         // TODO(damonkohler): API level 5 has many more types.
-        switch (mTelephonyManager.getNetworkType()) {
-            case TelephonyManager.NETWORK_TYPE_EDGE:
-                return "edge";
-            case TelephonyManager.NETWORK_TYPE_GPRS:
-                return "gprs";
+        int networkType;
+        if (SDK_INT >= 24) {
+            networkType = mTelephonyManager.getDataNetworkType();
+        } else {
+            networkType = mTelephonyManager.getNetworkType();
+        }
+        switch (networkType) {
+            //case TelephonyManager.NETWORK_TYPE_IWLAN: //这个不是wifi
+            //return "WIFI";
+            case TelephonyManager.NETWORK_TYPE_NR:
+                return "5G";
+            case TelephonyManager.NETWORK_TYPE_LTE:
+                return "4G";
+            case TelephonyManager.NETWORK_TYPE_HSDPA:
+            case TelephonyManager.NETWORK_TYPE_HSUPA:
+            case TelephonyManager.NETWORK_TYPE_HSPA:
+                return "3G HSPA";
+            case TelephonyManager.NETWORK_TYPE_HSPAP:
+                return "3G HSPA+";
             case TelephonyManager.NETWORK_TYPE_UMTS:
-                return "umts";
+                return "3G UMTS";
+            case TelephonyManager.NETWORK_TYPE_TD_SCDMA:
+            case TelephonyManager.NETWORK_TYPE_EHRPD:
+            case TelephonyManager.NETWORK_TYPE_EVDO_0:
+            case TelephonyManager.NETWORK_TYPE_EVDO_A:
+            case TelephonyManager.NETWORK_TYPE_EVDO_B:
+                return "3G Other";
+            case TelephonyManager.NETWORK_TYPE_GSM:
+            case TelephonyManager.NETWORK_TYPE_GPRS:
+            case TelephonyManager.NETWORK_TYPE_EDGE:
+                return "2G GSM";
+            case TelephonyManager.NETWORK_TYPE_1xRTT:
+            case TelephonyManager.NETWORK_TYPE_CDMA:
+                return "2G CDMA";
             case TelephonyManager.NETWORK_TYPE_UNKNOWN:
-                return "unknown";
+                return "Unknown";
             default:
-                return null;
+                return "Other";
         }
     }
 
@@ -293,4 +343,133 @@ public class PhoneFacade extends RpcReceiver {
 //    public List<NeighboringCellInfo> getNeighboringCellInfo() {
 //        return mTelephonyManager.getNeighboringCellInfo();
 //    }
+
+    //这是一个getCellLocation下级函数
+    private void getCellLocation(CellInfo cellInfo, JSONObject result, boolean complex) throws Exception {
+        if(complex)
+            result.put("Registered",cellInfo.isRegistered());
+        if (SDK_INT >= 29 && cellInfo instanceof CellInfoNr){
+            CellIdentityNr nrCellInfoIdetity = (CellIdentityNr) ((CellInfoNr) cellInfo).getCellIdentity();
+            result.put("Nci",nrCellInfoIdetity.getNci());
+            result.put("Pci",nrCellInfoIdetity.getPci());
+            result.put("Tac",nrCellInfoIdetity.getTac());
+            CellSignalStrengthNr cellSignalStrengthNr = (CellSignalStrengthNr) ((CellInfoNr) cellInfo).getCellSignalStrength();
+            result.put("NrDbm",cellSignalStrengthNr.getDbm());
+            if (complex) {
+                result.put("Mcc,Mnc",nrCellInfoIdetity.getMccString()+","+nrCellInfoIdetity.getMncString());
+                result.put("NrArfcn",nrCellInfoIdetity.getNrarfcn());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    int[] bands = nrCellInfoIdetity.getBands();
+                    JSONArray Bands = new JSONArray();
+                    for (int band : bands)
+                        Bands.put(band);
+                    result.put("Bands", Bands);
+                }
+            }
+        }
+        else if (cellInfo instanceof CellInfoLte){
+            CellIdentityLte lteCellInfoIdetity = ((CellInfoLte) cellInfo).getCellIdentity();
+            result.put("Ci", lteCellInfoIdetity.getCi());
+            result.put("Pci",lteCellInfoIdetity.getPci());
+            result.put("Tac",lteCellInfoIdetity.getTac());
+            CellSignalStrengthLte cellSignalStrengthLte = ((CellInfoLte) cellInfo).getCellSignalStrength();
+            result.put("LteDbm",cellSignalStrengthLte.getDbm());
+            if (complex) {
+                result.put("Mcc,Mnc",lteCellInfoIdetity.getMcc()+","+lteCellInfoIdetity.getMnc());
+                if (SDK_INT >= Build.VERSION_CODES.N) {
+                    result.put("Earfcn",lteCellInfoIdetity.getEarfcn());
+                }
+                //result.put("Bandwidth",lteCellInfoIdetity.getBandwidth()); //总是2147483647
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    int[] bands = lteCellInfoIdetity.getBands();
+                    JSONArray Bands = new JSONArray();
+                    for (int band : bands)
+                        Bands.put(band);
+                    result.put("Bands", Bands);
+                }
+            }
+        }
+        else if (cellInfo instanceof CellInfoWcdma){
+            CellIdentityWcdma wcdmaCellInfoIdetity = ((CellInfoWcdma) cellInfo).getCellIdentity();
+            result.put("Lac",wcdmaCellInfoIdetity.getLac());
+            result.put("Cid",wcdmaCellInfoIdetity.getCid());
+            result.put("Psc",wcdmaCellInfoIdetity.getPsc());
+            CellSignalStrengthWcdma cellSignalStrengthWcdma = ((CellInfoWcdma) cellInfo).getCellSignalStrength();
+            result.put("WcdmaDbm",cellSignalStrengthWcdma.getDbm());
+            if (complex) {
+                result.put("Mcc,Mnc",wcdmaCellInfoIdetity.getMcc()+","+wcdmaCellInfoIdetity.getMnc());
+                if (SDK_INT >= Build.VERSION_CODES.N) {
+                    result.put("Uarfcn",wcdmaCellInfoIdetity.getUarfcn());
+                }
+            }
+        }
+        else if (cellInfo instanceof CellInfoCdma){
+            CellIdentityCdma cdmaCellInfoIdetity = ((CellInfoCdma) cellInfo).getCellIdentity();
+            result.put("Sid",cdmaCellInfoIdetity.getSystemId());
+            result.put("Nid",cdmaCellInfoIdetity.getNetworkId());
+            result.put("Bid",cdmaCellInfoIdetity.getBasestationId());
+            CellSignalStrengthCdma cellSignalStrengthCdma = ((CellInfoCdma) cellInfo).getCellSignalStrength();
+            result.put("CdmaDbm",cellSignalStrengthCdma.getDbm());
+            if(complex){
+                result.put("Lat,Long",tudeIntToStr(cdmaCellInfoIdetity.getLatitude())+","+tudeIntToStr(cdmaCellInfoIdetity.getLongitude()));
+            }
+        }
+        else if (cellInfo instanceof CellInfoGsm){
+            CellIdentityGsm gsmCellInfoIdetity = ((CellInfoGsm) cellInfo).getCellIdentity();
+            result.put("Lac",gsmCellInfoIdetity.getLac());
+            result.put("Cid",gsmCellInfoIdetity.getCid());
+            CellSignalStrengthGsm cellSignalStrengthGsm = ((CellInfoGsm) cellInfo).getCellSignalStrength();
+            result.put("GsmDbm",cellSignalStrengthGsm.getDbm());
+            if (complex) {
+                result.put("Mcc,Mnc",gsmCellInfoIdetity.getMcc()+","+gsmCellInfoIdetity.getMnc());
+                if (SDK_INT >= Build.VERSION_CODES.N) {
+                    result.put("Arfcn",gsmCellInfoIdetity.getArfcn());
+                }
+            }
+        }
+    }
+
+    private String tudeIntToStr(int x){
+        return String.valueOf(Math.round((double) x/0.144D)/100000D);
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    @Rpc(description = "Returns the current cell location.")
+    public JSONObject getCellLocation() throws Exception {
+        JSONObject result = new JSONObject();
+        try{
+            List<CellInfo> cellInfos = mTelephonyManager.getAllCellInfo();
+            result.put("CellCount",cellInfos.size());
+            for (CellInfo cellInfo : cellInfos) {
+                if(!cellInfo.isRegistered()) continue;
+                getCellLocation(cellInfo,result,false);
+            }
+            return result;
+        } catch (Exception e){
+            throw new Exception("getCellLocation can't get any information because of No Location Permission or Completely No Signal .");
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    @Rpc(description = "Returns all the neighboring cell information of the device.")
+    public List<CellInfo> getAllCellInfo() throws Exception {
+        return mTelephonyManager.getAllCellInfo();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    @Rpc(description = "Returns all the cells location.")
+    public JSONArray getAllCellsLocation() throws Exception {
+        try{
+            List<CellInfo> cellInfos = mTelephonyManager.getAllCellInfo();
+            JSONArray Result = new JSONArray();
+            for (CellInfo cellInfo : cellInfos) {
+                JSONObject result = new JSONObject();
+                getCellLocation(cellInfo,result,true);
+                Result.put(result);
+            }
+            return Result;
+        } catch (Exception e){
+            throw new Exception("getAllCellsLocation can't get any information because of No Location Permission or Completely No Signal .");
+        }}
 }

@@ -11,7 +11,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -23,10 +22,12 @@ import com.quseit.base.QBaseApp;
 import org.qpython.qpy.console.ScriptExec;
 
 import com.quseit.util.FileHelper;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NUtil;
 
 import org.qpython.qpy.main.activity.BaseActivity;
+import org.qpython.qpy.main.app.App;
 import org.qpython.qpysdk.QPyConstants;
 
 import java.io.File;
@@ -47,7 +48,7 @@ public class MPyApi extends BaseActivity {
         }
     };
     private boolean           live       = false;
-    private String            logF       = QPyConstants.ABSOLUTE_LOG;
+    private String            logF       = FileUtils.getAbsoluteLogPath(App.getContext());
     private Handler           handler    = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -117,7 +118,7 @@ public class MPyApi extends BaseActivity {
                 String type = intent.getStringExtra(QPyConstants.EXTRA_CONTENT_URL1);
                 String path = intent.getStringExtra(QPyConstants.EXTRA_CONTENT_URL2);
                 if (type.equals("script")) {
-                    ScriptExec.getInstance().playScript(this,path, null, true);
+                    ScriptExec.getInstance().playScript(this,path, null);
                 } else if (type.equals("project")) {
                     ScriptExec.getInstance().playProject(this,path, false);
                 }
@@ -131,7 +132,7 @@ public class MPyApi extends BaseActivity {
                         param = bundle.getString("param");
                         if (param != null && param.equals("fileapi")) {
                             runMode = 2;
-                            ScriptExec.getInstance().playScript(this,pyfile, null, false);
+                            ScriptExec.getInstance().playScript(this,pyfile, null);
                         } else {
                             // Compatibility Mode
                             if (pycode.contains("#qpy:console\n") || NAction.isQPy3(getApplicationContext())) {
@@ -139,9 +140,9 @@ public class MPyApi extends BaseActivity {
                             } else {
                                 runMode = 1;
                             }
-                            String script = QPyConstants.ABSOLUTE_PATH + "/cache/last.py";
+                            String script = FileUtils.getAbsolutePath(App.getContext()) + "/cache/last.py";
                             FileHelper.putFileContents(this, script, pycode);
-                            ScriptExec.getInstance().playScript(this,script, null, false);
+                            ScriptExec.getInstance().playScript(this,script, null);
                         }
                     }
                 }
@@ -156,7 +157,7 @@ public class MPyApi extends BaseActivity {
         if (myURI != null) {
             String script = getApplicationContext().getFilesDir() + "/bin/share.py";
             String param = myURI.toString();
-            ScriptExec.getInstance().playQScript(this,script, param, false);
+            ScriptExec.getInstance().playQScript(this,script, param);
         }
     }
 
@@ -168,7 +169,7 @@ public class MPyApi extends BaseActivity {
             String script = getApplicationContext().getFilesDir() + "/bin/share.py";
             String param = sharedText;
             //new QPyTask().execute(script, param);
-            ScriptExec.getInstance().playQScript(this,script, param, false);
+            ScriptExec.getInstance().playQScript(this,script, param);
 
             // Update UI to reflect text being shared
         }
@@ -178,7 +179,7 @@ public class MPyApi extends BaseActivity {
         Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
         if (imageUri != null) {
             //onMenu();
-            ScriptExec.getInstance().playQScript(this, getApplicationContext().getFilesDir() + "/bin/share.py", imageUri.toString(), false);
+            ScriptExec.getInstance().playQScript(this, getApplicationContext().getFilesDir() + "/bin/share.py", imageUri.toString());
 
             // Update UI to reflect image being shared
         }
@@ -226,7 +227,7 @@ public class MPyApi extends BaseActivity {
 
                 } else {
                     try {
-                        String root = QBaseApp.getInstance().getOrCreateRoot(QPyConstants.DFROM_RUN);
+                        String root = QBaseApp.getInstance().getOrCreateRoot(App.getContext(),QPyConstants.DFROM_RUN);
                         File f = new File(root, ".last_tmp.py");
                         param = f.getAbsolutePath().toString();
                     } catch (Exception e) {
@@ -242,7 +243,7 @@ public class MPyApi extends BaseActivity {
             rBundle.putString("result", result);
             rBundle.putString("param", param);
             rBundle.putString("flag", flag);
-            rBundle.putString("log", QPyConstants.ABSOLUTE_LOG);
+            rBundle.putString("log", FileUtils.getAbsoluteLogPath(App.getContext()));
 
             rIntent.putExtras(rBundle);
 

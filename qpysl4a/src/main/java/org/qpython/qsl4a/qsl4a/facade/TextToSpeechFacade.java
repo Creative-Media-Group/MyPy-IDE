@@ -20,10 +20,9 @@ import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeech.OnInitListener;
 
-
 import org.qpython.qsl4a.qsl4a.jsonrpc.RpcReceiver;
 import org.qpython.qsl4a.qsl4a.rpc.Rpc;
-import org.qpython.qsl4a.qsl4a.rpc.RpcMinSdk;
+import org.qpython.qsl4a.qsl4a.rpc.RpcDefault;
 import org.qpython.qsl4a.qsl4a.rpc.RpcParameter;
 
 import java.util.concurrent.CountDownLatch;
@@ -32,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
  * Provides Text To Speech services for API 4 or more.
  */
 
-@RpcMinSdk(4)
 public class TextToSpeechFacade extends RpcReceiver {
 
   private final TextToSpeech mTts;
@@ -58,10 +56,16 @@ public class TextToSpeechFacade extends RpcReceiver {
   }
 
   @Rpc(description = "Speaks the provided message via TTS.")
-  public void ttsSpeak(@RpcParameter(name = "message") String message) throws InterruptedException {
+  public void ttsSpeak(
+          @RpcParameter(name = "message") String message,
+          @RpcParameter(name = "pitch") @RpcDefault("1.0") Double pitch,
+          @RpcParameter(name = "pitchRate") @RpcDefault("1.0") Double pitchRate
+  ) throws InterruptedException {
     mOnInitLock.await();
     if (message != null) {
-      mTts.speak(message, TextToSpeech.QUEUE_ADD, null);
+      mTts.setSpeechRate(pitchRate.floatValue());
+      mTts.setPitch(pitch.floatValue());
+      mTts.speak(message, TextToSpeech.QUEUE_ADD, null,null);
     }
   }
 

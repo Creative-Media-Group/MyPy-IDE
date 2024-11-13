@@ -16,7 +16,7 @@
 
 package org.qpython.qsl4a.qsl4a.jsonrpc;
 
-import org.qpython.qsl4a.qsl4a.LogUtil;
+//import org.qpython.qsl4a.qsl4a.LogUtil;
 import org.qpython.qsl4a.qsl4a.SimpleServer;
 import org.qpython.qsl4a.qsl4a.rpc.MethodDescriptor;
 import org.qpython.qsl4a.qsl4a.rpc.RpcError;
@@ -32,7 +32,7 @@ import org.json.JSONObject;
 
 /**
  * A JSON RPC server that forwards RPC calls to a specified receiver object.
- * 
+ *
  * @author Damon Kohler (damonkohler@gmail.com)
  */
 public class JsonRpcServer extends SimpleServer {
@@ -42,7 +42,7 @@ public class JsonRpcServer extends SimpleServer {
 
   /**
    * Construct a {@link JsonRpcServer} connected to the provided {@link RpcReceiverManager}.
-   * 
+   *
    * @param managerFactory
    *          the {@link RpcReceiverManager} to register with the server
    * @param handshake
@@ -66,28 +66,29 @@ public class JsonRpcServer extends SimpleServer {
   protected void handleConnection(Socket socket) throws Exception {
     RpcReceiverManager receiverManager = mRpcReceiverManagerFactory.create();
     BufferedReader reader =
-        new BufferedReader(new InputStreamReader(socket.getInputStream()), 8192);
+            new BufferedReader(new InputStreamReader(socket.getInputStream()), 8192);
     PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-    boolean passedAuthentication = false;
+    boolean unpass = true;
     String data;
     while ((data = reader.readLine()) != null) {
-      LogUtil.v("Received: " + data);
+      //LogUtil.v("Received: " + data);
       JSONObject request = new JSONObject(data);
       int id = request.getInt("id");
       String method = request.getString("method");
       JSONArray params = request.getJSONArray("params");
 
-      // First RPC must be _authenticate if a handshake was specified.
-      if (!passedAuthentication && mHandshake != null) {
-        if (!checkHandshake(method, params)) {
+      // First RPC must be _authenticate //if a handshake was specified.
+      if (unpass) {
+        if (method.equals("_authenticate") && mHandshake.equals(params.getString(0))) {
+          unpass = false;
+          send(writer, JsonRpcResult.result(id, true));
+          continue;
+        } else {
           SecurityException exception = new SecurityException("Authentication failed!");
           send(writer, JsonRpcResult.error(id, exception));
           shutdown();
           throw exception;
         }
-        passedAuthentication = true;
-        send(writer, JsonRpcResult.result(id, true));
-        continue;
       }
 
       MethodDescriptor rpc = receiverManager.getMethodDescriptor(method);
@@ -98,22 +99,15 @@ public class JsonRpcServer extends SimpleServer {
       try {
         send(writer, JsonRpcResult.result(id, rpc.invoke(receiverManager, params)));
       } catch (Throwable t) {
-        LogUtil.e("Invocation error.", t);
+        //LogUtil.e("Invocation error.", t);
         send(writer, JsonRpcResult.error(id, t));
       }
     }
   }
 
-  private boolean checkHandshake(String method, JSONArray params) throws JSONException {
-    if (!method.equals("_authenticate") || !mHandshake.equals(params.getString(0))) {
-      return false;
-    }
-    return true;
-  }
-
   private void send(PrintWriter writer, JSONObject result) {
     writer.write(result + "\n");
     writer.flush();
-    LogUtil.v("Sent: " + result);
+    //LogUtil.v("Sent: " + result);
   }
 }

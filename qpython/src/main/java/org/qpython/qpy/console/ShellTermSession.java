@@ -19,11 +19,13 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.quseit.util.FileHelper;
 import com.quseit.util.FileUtils;
 
+import org.qpython.qpy.R;
 import org.qpython.qpy.console.compont.FileCompat;
 import org.qpython.qpy.console.util.TermSettings;
 
@@ -113,11 +115,13 @@ public class ShellTermSession extends GenericTermSession {
 
         File enf = new File(context.getFilesDir()+"/bin/init.sh");
         //if (! enf.exists()) {
-        String content = "#!/system/bin/sh";
-        for (int i=0;i<env.length;i++) {
-            content += "\nexport "+env[i];
+        StringBuilder content = new StringBuilder(
+                "#!" + PreferenceManager.getDefaultSharedPreferences(context).getString(
+                "shell", context.getString(R.string.pref_shell_default)));
+        for (String s : env) {
+            content.append("\nexport ").append(s);
         }
-        FileHelper.putFileContents(context, enf.getAbsolutePath(), content.trim());
+        FileHelper.putFileContents(context, enf.getAbsolutePath(), content.toString().trim());
         try {
             FileUtils.chmod(enf, 0755);
         }

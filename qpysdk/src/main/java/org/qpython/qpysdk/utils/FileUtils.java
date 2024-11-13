@@ -3,6 +3,7 @@ package org.qpython.qpysdk.utils;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import java.io.File;
@@ -79,7 +80,10 @@ public class FileUtils {
         //获取文件file的MIME类型
         String type = getMIMEType(file);
         //设置intent的data和Type属性。
-        intent.setDataAndType(/*uri*/Uri.fromFile(file), type);
+        Uri uri;
+        uri = FileProvider.getUriForFile(context,context.getPackageName() + ".provider",file);
+        intent.setDataAndType(uri, type);
+        //intent.setDataAndType(/*uri*/Uri.fromFile(file), type);
         //跳转
         context.startActivity(intent);
     }

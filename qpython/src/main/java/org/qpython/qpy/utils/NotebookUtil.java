@@ -1,23 +1,22 @@
 package org.qpython.qpy.utils;
 
-import android.app.Activity;
 import android.content.Context;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.quseit.base.QBaseApp;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NStorage;
 import com.quseit.util.NUtil;
 
 import org.apache.http.Header;
-import org.qpython.qpy.R;
 import org.qpython.qpy.console.ScriptExec;
 import org.qpython.qpy.main.app.App;
 import org.qpython.qpysdk.QPyConstants;
-import org.qpython.qpysdk.QPySDK;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,12 +40,12 @@ import okhttp3.Response;
 public class NotebookUtil {
 
     private static final String TAG = "NotebookUtil";
-    public static final String RELEASE_PATH = QPyConstants.ABSOLUTE_PATH + "/.notebook";
+    public static final String RELEASE_PATH = FileUtils.getAbsolutePath(App.getContext()) + "/.notebook";
     public static final String NB_SERVER = "http://127.0.0.1:13000";
     public static final String KILL_SERVER = NB_SERVER + "/__exit";
-    public static final String NOTEBOOK_SERVER = NB_SERVER + "/notebooks/";
+    public static final String NOTEBOOK_SERVER = NB_SERVER + "/notebooks/files/notebooks";
 
-    public static final String NOTEBOOK_DIR = QPyConstants.ABSOLUTE_PATH+"/";
+    public static final String NOTEBOOK_DIR = RELEASE_PATH.replace("/.notebook","/notebooks");
     public static final String ext = ".ipynb";
     public static final String Untitled = "Untitled";
 
@@ -62,7 +61,8 @@ public class NotebookUtil {
      * 检查notebook库是否安装
      */
     public static boolean isNotebookLibInstall(Context context) {
-        boolean common = new File(context.getFilesDir().getAbsolutePath() + "/lib/notebook.zip").exists();
+        boolean common = new File(context.getFilesDir().getAbsolutePath(),"lib/python"+QPyConstants.PyVer+"/site-packages/notebook").exists();
+        //boolean common = new File(context.getFilesDir().getAbsolutePath() + "/lib/notebook.zip").exists();
         if (NAction.isQPy3(context)) {
             return common & new File(context.getFilesDir().getAbsoluteFile()+"/bin/jupyter").exists();
         } else {
@@ -87,7 +87,7 @@ public class NotebookUtil {
                     }
                 }
             }
-            if (context.getPackageName().equals("com.hipipal.qpyplus")) {  // old version
+            /*if (context.getPackageName().equals("com.hipipal.qpyplus")) {  // old version
                 // Rename correct files to
                 String[] list = {"jupyter-chq", "jupyter2-chq", "jupyter-notebook-chq", "jupyter2-notebook-chq"};
                 for (int i=0;i<list.length;i++) {
@@ -101,7 +101,7 @@ public class NotebookUtil {
 
                     }
                 }
-            }
+            }*/
 
         } else {
             return false;
@@ -114,11 +114,11 @@ public class NotebookUtil {
     /**
      * 创建一个的notebook
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+
     public static String createNotebook(Context context, String fileName) {
         InputStream is = null;
         FileOutputStream fileOutputStream = null;
-        File file = new File(NOTEBOOK_DIR + "notebooks/", fileName + ext);
+        File file = new File(NOTEBOOK_DIR, fileName + ext);
         try {
             if (!file.exists()) {
                 file.getParentFile().mkdirs();
@@ -226,7 +226,7 @@ public class NotebookUtil {
 
     private static String getTempFilePath(String url) {
         //LogUtil.d("NotebookUtil", "getTempFilePath:"+url);
-        File dir = new File(QPyConstants.ABSOLUTE_PATH, "notebooks");
+        File dir = new File(FileUtils.getAbsolutePath(App.getContext()), "notebooks");
         if (!dir.exists()) {
             dir.mkdirs();
         }
@@ -253,22 +253,22 @@ public class NotebookUtil {
 
     public static void startNotebookService2(Context context) {
         int notebookPid;
-        if (NAction.isQPy3(context)) {
-            notebookPid = ScriptExec.getInstance().playQScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb_man.py", null,false);
+        //if (NAction.isQPy3(context)) {
+            notebookPid = ScriptExec.getInstance().playQScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb_man.py", null);
 
-        } else {
-            notebookPid = ScriptExec.getInstance().playQScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb2_man.py", null,false);
-        }
+        /*} else {
+            notebookPid = ScriptExec.getInstance().playQScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb_man.py", null);
+        }*/
         Log.d("NotebookUtil", "startNotebookService2:"+notebookPid);
         NStorage.setSP(context, "notebook.pid", ""+notebookPid);
     }
 
     public static void startNotebookService(Context context) {
-        if (NAction.isQPy3(context)) {
-            ScriptExec.getInstance().playDScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb_man.py", null,false);
-        } else {
-            ScriptExec.getInstance().playDScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb2_man.py", null,false);
-        }
+        //if (NAction.isQPy3(context)) {
+            ScriptExec.getInstance().playDScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb_man.py", null);
+        /*} else {
+            ScriptExec.getInstance().playDScript(context, context.getFilesDir().getAbsolutePath() + "/bin/nb2_man.py", null);
+        }*/
     }
 
     public static boolean isNBSrvSet(Context context) {
@@ -298,11 +298,11 @@ public class NotebookUtil {
         }
     }
 
-    public static String getNbResFk(Context context) {
-        return NAction.isQPy3(context)?QPyConstants.KEY_NOTEBOOK_RES: QPyConstants.KEY_NOTEBOOK2_RES;
+    public static String getNbResFk() {
+        return QPyConstants.KEY_NOTEBOOK_RES;
     }
     public static String getNBLink(Context context) {
-        String nb_link = NAction.isQPy3(context)?"https://dl.qpy.io/notebook3.json":"https://dl.qpy.io/notebook2.json";
+        String nb_link = NAction.isQPy3(context)?"https://io.qpython.org/notebook3.json":"https://io.qpython.org/notebook2.json";
         return nb_link+"?"+NAction.getUserUrl(context);
     }
 

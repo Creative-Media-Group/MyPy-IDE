@@ -36,14 +36,13 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import org.qpython.qsl4a.qsl4a.FileUtils;
+import org.qpython.qsl4a.qsl4a.util.FileUtils;
 import org.qpython.qsl4a.qsl4a.LogUtil;
 import org.qpython.qsl4a.qsl4a.SingleThreadExecutor;
 import org.qpython.qsl4a.qsl4a.event.Event;
 import org.qpython.qsl4a.qsl4a.facade.EventFacade;
 import org.qpython.qsl4a.qsl4a.facade.ui.UiFacade;
 import org.qpython.qsl4a.qsl4a.future.FutureActivityTask;
-import org.qpython.qsl4a.qsl4a.interpreter.InterpreterConstants;
 import org.qpython.qsl4a.qsl4a.jsonrpc.JsonBuilder;
 import org.qpython.qsl4a.qsl4a.jsonrpc.JsonRpcResult;
 import org.qpython.qsl4a.qsl4a.jsonrpc.RpcReceiver;

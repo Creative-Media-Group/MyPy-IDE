@@ -7,13 +7,13 @@ import android.os.Environment;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.gson.reflect.TypeToken;
+import com.google.common.reflect.TypeToken;
 import com.quseit.util.ACache;
 import com.quseit.util.DateTimeHelper;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 
 import org.greenrobot.eventbus.EventBus;
-import org.qpython.qpy.BuildConfig;
 import org.qpython.qpy.main.activity.LibActivity;
 import org.qpython.qpy.main.app.App;
 import org.qpython.qpy.main.server.model.BaseLibModel;
@@ -32,10 +32,10 @@ import java.util.List;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.android.BuildConfig;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-import static org.qpython.qpy.main.app.CONF.LIB_DOWNLOAD_TEMP;
 
 
 public class Service extends CacheKey {
@@ -45,7 +45,7 @@ public class Service extends CacheKey {
 
     public Service() {
         request = App.getRetrofit()
-                .baseUrl(BASE_URL + "dl.qpy.io")
+                .baseUrl(BASE_URL + "io.qpython.org")
                 .build()
                 .create(ServiceRequest.class);
 
@@ -139,13 +139,13 @@ public class Service extends CacheKey {
         }
     }
 
-    public void downloadLib(String url, String fileName, String description) {
+    public void downloadLib(Context context,String url, String fileName, String description) {
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
         request.setDescription(description);
         request.setTitle(fileName);
         request.allowScanningByMediaScanner();
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setDestinationInExternalPublicDir(LIB_DOWNLOAD_TEMP, fileName);
+        request.setDestinationInExternalPublicDir(FileUtils.getLibDownloadTempPath(context), fileName);
 
         // get download service and enqueue file
         DownloadManager manager = (DownloadManager) App.getContext().getSystemService(Context.DOWNLOAD_SERVICE);

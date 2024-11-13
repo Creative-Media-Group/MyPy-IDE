@@ -9,10 +9,10 @@
         <!--android:key="install_py3"-->
         <!--android:title="@string/install_py3"/>-->
 
-    <Preference
-        android:key="course"
-        android:title="@string/course"
-        android:summary="@string/learn_course"/>
+<!--    <Preference-->
+<!--        android:key="course"-->
+<!--        android:title="@string/course"-->
+<!--        android:summary="@string/learn_course"/>-->
 
 
     <Preference
@@ -40,11 +40,11 @@
         android:title="@string/last_log"
         android:summary="@string/get_last_log"/>
 
-    <PreferenceScreen
+    <!--PreferenceScreen
         android:key="@string/key_py_inter"
         android:title="@string/py_inter">
 
-        <!--PreferenceCategory
+        <PreferenceCategory
             android:key="py_inter_update"
             android:title="@string/py_resources">
 
@@ -57,7 +57,7 @@
                 android:key="@string/key_update_qpy2compatible"
                 android:title="@string/update_py2compatible"/>
 
-        </PreferenceCategory-->
+        </PreferenceCategory>
 
         <PreferenceCategory
             android:key="py_inter_update"
@@ -72,16 +72,16 @@
                 android:title="@string/switch_py2"/>
 
 
-            <!--Preference
+            <Preference
                 android:key="@string/key_py2compatible"
                 android:summary="@string/switch_py2_libs"
-                android:title="@string/switch_py2compatible"/-->
+                android:title="@string/switch_py2compatible"/>
 
         </PreferenceCategory>
     </PreferenceScreen>
 
 
-    <!--CheckBoxPreference
+    <CheckBoxPreference
         android:key="@string/key_aipy"
         android:summary="@string/aipy_install"
         android:title="@string/install_aipy"/-->
@@ -108,6 +108,12 @@
                 android:title="@string/notebook_explorer"/>
         </PreferenceCategory>
     </PreferenceScreen>
+
+    <CheckBoxPreference
+        android:key="@string/key_alive"
+        android:summaryOn="@string/enable_keep_alive"
+        android:summaryOff="@string/disable_keep_alive"
+        android:title="@string/keep_alive_mode"/>
 
     <CheckBoxPreference
         android:key="@string/key_root"

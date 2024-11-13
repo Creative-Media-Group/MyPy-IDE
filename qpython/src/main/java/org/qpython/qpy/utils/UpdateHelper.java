@@ -24,6 +24,7 @@ import com.quseit.common.db.CacheLog;
 import com.quseit.common.db.UserLog;
 import com.quseit.util.DateTimeHelper;
 import com.quseit.util.FileHelper;
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NUtil;
 import com.quseit.util.VeDate;
@@ -128,16 +129,16 @@ public class UpdateHelper {
 
     private static String confGetUpdateURL(Context context, int flag) {
         if (flag == 2) {
-            return QPyConstants.LOG_URL + context.getPackageName() + "/" + NUtil.getVersinoCode(context);
+            return QPyConstants.LOG_URL + context.getPackageName() + "/" + NUtil.getVersionCode(context);
         } else if (flag == 3) {
-            return QPyConstants.AD_URL + context.getPackageName() + "/" + NUtil.getVersinoCode(context) + "?"
+            return QPyConstants.AD_URL + context.getPackageName() + "/" + NUtil.getVersionCode(context) + "?"
                     + NAction.getUserUrl(context.getApplicationContext());
         } else if (flag == 5) {
-            return QPyConstants.IAP_LOG_URL + context.getPackageName() + "/" + NUtil.getVersinoCode(context) + "?"
+            return QPyConstants.IAP_LOG_URL + context.getPackageName() + "/" + NUtil.getVersionCode(context) + "?"
                     + NAction.getUserUrl(context.getApplicationContext());
 
         } else {
-            return QPyConstants.UPDATE_URL + context.getPackageName() + "/" + NUtil.getVersinoCode(context);
+            return QPyConstants.UPDATE_URL + context.getPackageName() + "/" + NUtil.getVersionCode(context);
 
         }
     }
@@ -169,7 +170,7 @@ public class UpdateHelper {
                     checkConfUpdate(context.getApplicationContext());
 
                     // 清空图片目录的缓存
-                    String cacheDir = Environment.getExternalStorageDirectory() + "/" + root + "/" + BASE_CONF.DCACHE + "/";
+                    String cacheDir = FileUtils.getPath(context.getApplicationContext()) + "/" + root + "/" + BASE_CONF.DCACHE + "/";
                     FileHelper.clearDir(cacheDir, 0, false);
 
                 }
@@ -281,7 +282,7 @@ public class UpdateHelper {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                if (lastPluginVer < currentPluginVer || NUtil.getVersinoCode(context.getApplicationContext()) < ver) {
+                if (lastPluginVer < currentPluginVer || NUtil.getVersionCode(context.getApplicationContext()) < ver) {
                     //弹出提示更新
                     AlertDialog.Builder alert = new AlertDialog.Builder(context);
                     final String finalDownloadUrl = downloadUrl;
@@ -292,7 +293,7 @@ public class UpdateHelper {
                             .setMessage(verName + "\n" + desc)
                             .setPositiveButton(context.getString(com.quseit.android.R.string.up_soft), new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
-                                    if (NUtil.getVersinoCode(context.getApplicationContext()) < finalVer) {
+                                    if (NUtil.getVersionCode(context.getApplicationContext()) < finalVer) {
                                         //app更新
                                         Intent intent = new Intent();
                                         intent.setAction("android.intent.action.VIEW");

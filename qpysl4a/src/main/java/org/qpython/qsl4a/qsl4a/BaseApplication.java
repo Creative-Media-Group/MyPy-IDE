@@ -20,6 +20,7 @@ import android.app.Application;
 
 import org.qpython.qsl4a.qsl4a.interpreter.InterpreterConfiguration;
 import org.qpython.qsl4a.qsl4a.trigger.TriggerRepository;
+import org.qpython.qsl4a.qsl4a.future.FutureActivityTaskExecutor;
 
 public class BaseApplication extends Application {
 

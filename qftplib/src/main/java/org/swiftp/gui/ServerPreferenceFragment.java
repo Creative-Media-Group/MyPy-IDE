@@ -49,7 +49,7 @@ public class ServerPreferenceFragment extends PreferenceFragment implements
             if (intent.getAction().equals(FTPServerService.ACTION_STARTED)) {
                 running_state.setChecked(true);
                 // Fill in the FTP server address
-                InetAddress address = FTPServerService.getWifiIp();
+                InetAddress address = FTPServerService.getWifiAndApIp();
                 if (address == null) {
                     Log.v(TAG, "Unable to retreive wifi ip address");
                     running_state.setSummary(R.string.cant_get_url);

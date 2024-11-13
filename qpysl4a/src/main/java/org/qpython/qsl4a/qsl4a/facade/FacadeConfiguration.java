@@ -26,6 +26,8 @@ import org.qpython.qsl4a.qsl4a.rpc.RpcMinSdk;
 import org.qpython.qsl4a.qsl4a.rpc.RpcStartEvent;
 import org.qpython.qsl4a.qsl4a.rpc.RpcStopEvent;
 
+import org.qpython.qsl4a.qsl4a.facade.usb.USBHostSerialFacade;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -86,24 +88,28 @@ public class FacadeConfiguration {
       sFacadeClassList.add(PreferencesFacade.class);
       sFacadeClassList.add(QPyInterfaceFacade.class);
       sFacadeClassList.add(USBHostSerialFacade.class);
+      sFacadeClassList.add(VideoFacade.class);
+      sFacadeClassList.add(FloatViewFacade.class);
+      sFacadeClassList.add(CipherFacade.class);
+      sFacadeClassList.add(DocumentFileFacade.class);
 
-    if (sSdkLevel >= 4) {
-      sFacadeClassList.add(TextToSpeechFacade.class);
-    } else {
-      sFacadeClassList.add(EyesFreeFacade.class);
-    }
+    //if (sSdkLevel >= 4) {
+       sFacadeClassList.add(TextToSpeechFacade.class);
+    //} else {
+      //sFacadeClassList.add(EyesFreeFacade.class);
+    //}
 
-    if (sSdkLevel >= 5) {
+    //if (sSdkLevel >= 5) {
       sFacadeClassList.add(BluetoothFacade.class);
-    }
+    //}
 
-    if (sSdkLevel >= 7) {
+    //if (sSdkLevel >= 7) {
       sFacadeClassList.add(SignalStrengthFacade.class);
-    }
+    //}
 
-    if (sSdkLevel >= 8) {
+    //if (sSdkLevel >= 8) {
       sFacadeClassList.add(WebCamFacade.class);
-    }
+    //}
 
     for (Class<? extends RpcReceiver> recieverClass : sFacadeClassList) {
       for (MethodDescriptor rpcMethod : MethodDescriptor.collectFrom(recieverClass)) {

@@ -60,7 +60,7 @@
             android:drawableStart="@drawable/ic_login"
             android:paddingLeft="@dimen/default_margin"
             android:paddingRight="@dimen/default_margin"
-            android:text="@string/sign_in_with_google"
+            android:text=""
             android:textAllCaps="false"
             android:textColor="@color/black"
             app:layout_constraintBottom_toBottomOf="parent"

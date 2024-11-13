@@ -26,6 +26,6 @@ dependencies {
     api rootProject.ext.libOkHttp3
     api rootProject.ext.libRxJava
     api rootProject.ext.libRxAndroid
-    api 'com.liulishuo.filedownloader:library:1.7.7'
+    api rootProject.ext.libFileDownloaderLib
     api rootProject.ext.libSupportV4
 }

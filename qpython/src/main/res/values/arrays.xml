@@ -226,7 +226,7 @@
     <string-array name="text_ext" translatable="false">
         <item>py</item>
         <item>txt</item>
-        <item>kv</item>
+        <item>sh</item>
         <item>html</item>
         <item>htm</item>
         <item>js</item>
@@ -236,7 +236,7 @@
         <item>log</item>
         <item>c</item>
         <item>h</item>
-
+        <item>conf</item>
     </string-array>
 
     <string-array name="syntax_ext" translatable="false">
@@ -261,9 +261,7 @@
 
 
     <string-array name="qpy3_zip" translatable="false">
-        <item>private31.mp3</item>
-        <item>private32.mp3</item>
-        <item>private33.mp3</item>
+        <item>resource3.mp3</item>
     </string-array>
 
     <string-array name="funding_count_divider" translatable="false">

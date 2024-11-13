@@ -3,11 +3,7 @@ package com.quseit.util;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Environment;
-import android.util.*;
-import android.util.Log;
 import android.webkit.MimeTypeMap;
-import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -247,7 +243,7 @@ public class FileHelper {
         try {
 //            File basePath = new File(Environment.getExternalStorageDirectory(),
 //            FileUtils.createTestDir(context,"test");
-            File basePath = new File(FileUtils.getQyPath(context),
+            File basePath = new File(FileUtils.getQyPath(),
                     parDir);
 
             if (!basePath.exists()) {
@@ -260,7 +256,7 @@ public class FileHelper {
             if (!subdir.equals("")) {
 //                subPath = new File(Environment.getExternalStorageDirectory(),
 //                FileUtils.createTestDir(context,"test");
-                subPath = new File(FileUtils.getQyPath(context),
+                subPath = new File(FileUtils.getQyPath(),
                         parDir + "/" + subdir);
                 if (!subPath.exists()) {
                     if (!subPath.mkdirs()) {

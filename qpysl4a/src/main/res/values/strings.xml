@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">QSL4A</string>
+    <string name="float_view_out_range">Float View Index Out of Range .</string>
+    <string name="float_view_not_exist">Float View Index Not Exist .</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="daemon">Daemon</string>
+    <string name="activity">Activity</string>
+    <string name="dialog_activity">QSL4A DialogActivity</string>
+    <string name="future_activity">QSL4A FutureActivity</string>
+    <string name="share">Share</string>
+    <string name="video">Video</string>
+    <string name="browser">Browser</string>
+    <string name="launch">Launch</string>
+    <string name="open">Open</string>
+    <string name="normal">Normal</string>
+    <string name="click_daemon">Click on "Daemon+Number" in the multitask list to unlock the process</string>
 </resources>

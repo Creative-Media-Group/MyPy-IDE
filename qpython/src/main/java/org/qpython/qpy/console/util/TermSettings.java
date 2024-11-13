@@ -17,6 +17,7 @@ package org.qpython.qpy.console.util;/*
 
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.preference.PreferenceManager;
 import android.view.KeyEvent;
 
 import org.qpython.qpy.R;
@@ -41,6 +42,7 @@ public class TermSettings {
     private int mFnKeyId;
     private int mUseCookedIME;
     private String mShell;
+    private String mShellInterface;
     private String mFailsafeShell;
     private String mInitialCommand;
     private String mTermType;
@@ -70,6 +72,7 @@ public class TermSettings {
     private static final String FNKEY_KEY = "fnkey";
     private static final String IME_KEY = "ime";
     private static final String SHELL_KEY = "shell";
+    private static final String SHELL_INTERFACE_KEY = "shell_interface";
     private static final String INITIALCOMMAND_KEY = "initialcommand";
     private static final String TERMTYPE_KEY = "termtype";
     private static final String CLOSEONEXIT_KEY = "close_window_on_process_exit";
@@ -113,9 +116,9 @@ public class TermSettings {
     public static final int ACTION_BAR_MODE_HIDES = 2;
     private static final int ACTION_BAR_MODE_MAX = 2;
 
-    public static final int ORIENTATION_UNSPECIFIED = 0;
+    /*public static final int ORIENTATION_UNSPECIFIED = 0;
     public static final int ORIENTATION_LANDSCAPE = 1;
-    public static final int ORIENTATION_PORTRAIT = 2;
+    public static final int ORIENTATION_PORTRAIT = 2;*/
 
     /**
      * An integer not in the range of real key codes.
@@ -173,6 +176,7 @@ public class TermSettings {
         mUseCookedIME = Integer.parseInt(res.getString(R.string.pref_ime_default));
         mFailsafeShell = res.getString(R.string.pref_shell_default);
         mShell = mFailsafeShell;
+        mShellInterface = res.getString(R.string.pref_shell_interface_default);
         mInitialCommand = res.getString(R.string.pref_initialcommand_default_qpython);
         mTermType = res.getString(R.string.pref_termtype_default);
         mCloseOnExit = res.getBoolean(R.bool.pref_close_window_on_process_exit_default);
@@ -202,6 +206,7 @@ public class TermSettings {
                 FN_KEY_SCHEMES.length - 1);
         mUseCookedIME = readIntPref(IME_KEY, mUseCookedIME, 1);
         mShell = readStringPref(SHELL_KEY, mShell);
+        mShellInterface = readStringPref(SHELL_INTERFACE_KEY,mShellInterface);
         mInitialCommand = readStringPref(INITIALCOMMAND_KEY, mInitialCommand);
         mTermType = readStringPref(TERMTYPE_KEY, mTermType);
         mCloseOnExit = readBooleanPref(CLOSEONEXIT_KEY, mCloseOnExit);
@@ -321,6 +326,10 @@ public class TermSettings {
 
     public String getShell() {
         return mShell;
+    }
+
+    public String getShellInterface() {
+        return mShellInterface;
     }
 
     public String getFailsafeShell() {

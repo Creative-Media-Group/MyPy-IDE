@@ -5,11 +5,9 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
-import android.net.Uri;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
@@ -25,6 +23,7 @@ import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.quseit.util.FileUtils;
 import com.quseit.util.NAction;
 import com.quseit.util.NStorage;
 
@@ -276,7 +275,7 @@ public class TedFragment extends Fragment implements Constants, TextWatcher, Ind
                 if (activity.mCurrentFilePath.contains("/projects")) {
                     ScriptExec.getInstance().playProject(getActivity(), activity.mCurrentFilePath.replace("/main.py", ""), false);
                 } else {
-                    ScriptExec.getInstance().playScript(getActivity(), activity.mCurrentFilePath, null, false);
+                    ScriptExec.getInstance().playScript(getActivity(), activity.mCurrentFilePath, null);
                 }
             }
         } else {
@@ -330,7 +329,7 @@ public class TedFragment extends Fragment implements Constants, TextWatcher, Ind
     public void SnippetsList() {
         boolean isQpy3 = NAction.isQPy3(getContext());
         List<String> listItems = new ArrayList<>();
-        String baseDir = Environment.getExternalStorageDirectory().getAbsolutePath()
+        String baseDir = FileUtils.getQyPath()
                 + "/" + QPyConstants.BASE_PATH;
         String path = baseDir + (isQpy3 ? "/snippets3/" : "/snippets/");
         String files;
@@ -367,7 +366,7 @@ public class TedFragment extends Fragment implements Constants, TextWatcher, Ind
      */
     public void insertSnippet(String snippetName) throws IOException {
         boolean isQPy3 = NAction.isQPy3(getContext());
-        String baseDir = Environment.getExternalStorageDirectory().getAbsolutePath()
+        String baseDir = FileUtils.getQyPath()
                 + "/" + QPyConstants.BASE_PATH;
         String path = baseDir + (isQPy3 ? "/snippets3/" : "/snippets/");
         String s;
@@ -401,7 +400,7 @@ public class TedFragment extends Fragment implements Constants, TextWatcher, Ind
 
     public void saveCodeSnippet(String selectText) {
         boolean isQPy3 = NAction.isQPy3(getContext());
-        String baseDir = Environment.getExternalStorageDirectory().getAbsolutePath()
+        String baseDir = FileUtils.getQyPath()
                 + "/" + QPyConstants.BASE_PATH;
         String path = baseDir + (isQPy3 ? "/snippets3/" : "/snippets/");
 

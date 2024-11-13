@@ -10,7 +10,10 @@ import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
+import com.quseit.util.FileUtils;
+
 import org.qpython.qpy.main.activity.QWebViewActivity;
+import org.qpython.qpy.main.app.App;
 import org.qpython.qpysdk.utils.FileHelper;
 import java.io.File;
 import java.net.MalformedURLException;
@@ -51,12 +54,12 @@ public class Utils extends org.qpython.qpysdk.utils.Utils {
     public static void createDirectoryOnExternalStorage(String path) {
         try {
             if (Environment.getExternalStorageState().equalsIgnoreCase("mounted")) {
-                File file = new File(Environment.getExternalStorageDirectory(), path);
+                File file = new File(FileUtils.getPath(App.getContext()), path);
                 if (!file.exists()) {
                     try {
                         file.mkdirs();
 
-                        Log.d(TAG, "createDirectoryOnExternalStorage created " + Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + path);
+                        Log.d(TAG, "createDirectoryOnExternalStorage created " + FileUtils.getQyPath() + "/" + path);
                     } catch (Exception e) {
                         Log.e(TAG, "createDirectoryOnExternalStorage error: ", e);
                     }
@@ -96,7 +99,7 @@ public class Utils extends org.qpython.qpysdk.utils.Utils {
         return Locale.getDefault().getLanguage();
     }
 
-    public static int getVersinoCode(Context context) {
+    public static int getVersionCode(Context context) {
         int intVersioinCode = 0;
         try {
             PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);

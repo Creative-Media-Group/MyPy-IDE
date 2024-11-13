@@ -31,7 +31,6 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -69,7 +68,6 @@ import com.quseit.util.NAction;
 
 import org.qpython.qpy.R;
 import org.qpython.qpy.console.compont.ActivityCompat;
-import org.qpython.qpysdk.utils.AndroidCompat;
 import org.qpython.qpy.console.compont.FileCompat;
 import org.qpython.qpy.console.compont.MenuItemCompat;
 import org.qpython.qpy.console.util.SessionList;
@@ -78,6 +76,7 @@ import org.qpython.qpy.main.activity.NotebookActivity;
 import org.qpython.qpy.main.app.App;
 import org.qpython.qpy.texteditor.ui.adapter.bean.PopupItemBean;
 import org.qpython.qpy.texteditor.ui.view.EditorPopUp;
+import org.qpython.qpysdk.utils.AndroidCompat;
 import org.qpython.qsl4a.qsl4a.StringUtils;
 
 import java.io.File;
@@ -85,7 +84,6 @@ import java.io.IOException;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
@@ -125,6 +123,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
     private static final String PERMISSION_PATH_PREPEND_BROADCAST = "jackpal.androidterm.permission.PREPEND_TO_PATH";
     // Available on API 12 and later
     private static final int    FLAG_INCLUDE_STOPPED_PACKAGES     = 0x20;
+    private static final String TYPE = "shell_type";
     /**
      * The ViewFlipper which holds the collection of EmulatorView widgets.
      */
@@ -158,6 +157,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
      * Intercepts keys before the view/terminal gets it.
      */
     private View.OnKeyListener mKeyListener = new View.OnKeyListener() {
+        @Override
         public boolean onKey(View v, int keyCode, KeyEvent event) {
             return backkeyInterceptor(keyCode, event) || keyboardShortcuts(keyCode, event);
         }
@@ -232,6 +232,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
         }
     };
     private ServiceConnection mTSConnection = new ServiceConnection() {
+        @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             Log.i(TermDebug.LOG_TAG, "Bound to TermService");
             TermService.TSBinder binder = (TermService.TSBinder) service;
@@ -246,6 +247,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
             }
         }
 
+        @Override
         public void onServiceDisconnected(ComponentName arg0) {
             mTermService = null;
         }
@@ -258,9 +260,9 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
         context.startActivity(intent);
     }
 
-    public static void startShell(Context context) {
+    public static void startShell(Context context,String shellType) {
         Intent intent = new Intent(context, TermActivity.class);
-        intent.putExtra("shell_type","shell");
+        intent.putExtra(TYPE,shellType);
         context.startActivity(intent);
     }
 
@@ -285,15 +287,15 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
         final SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         mPrefs.registerOnSharedPreferenceChangeListener(this);
         mSettings = new TermSettings(getResources(), mPrefs);
-        if (Build.VERSION.SDK_INT < 16 && mSettings.showStatusBar()) {
+        /*if (Build.VERSION.SDK_INT < 16 && mSettings.showStatusBar()) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+        }*/
         setContentView(R.layout.term_activity);
         initView();
         mPrivateAlias = new ComponentName(this, RemoteInterface.PRIVACT_ACTIVITY_ALIAS);
         if (icicle == null)
-            onNewIntent(getIntent());
+        {onNewIntent(getIntent());}
 
 
         Intent broadcast = new Intent(ACTION_PATH_BROADCAST);
@@ -747,17 +749,9 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
 
     private void setTextToEmulator(String text) {
         if (mViewFlipper.getCurrentView() != null) {
-            if (text!=null && text.equals("[tab]")) {
-                Log.d("TermAcity", "setTextToEmulator:"+text);
-
-                //((EmulatorView) mViewFlipper.getCurrentView()).sendTabKey();
-
-                ((EmulatorView) mViewFlipper.getCurrentView()).setTextBuff("\t");
-                ((EmulatorView) mViewFlipper.getCurrentView()).getTermSession().write("\t");
-                ((EmulatorView) mViewFlipper.getCurrentView()).getTermSession().notifyUpdate();
-
-
-            } else {
+            {
+                if(text.equals("[tab]"))
+                    text="\t";
                 ((EmulatorView) mViewFlipper.getCurrentView()).setTextBuff(text);
                 ((EmulatorView) mViewFlipper.getCurrentView()).getTermSession().write(text);
                 ((EmulatorView) mViewFlipper.getCurrentView()).getTermSession().notifyUpdate();
@@ -944,6 +938,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
     }
 
     // Called when the list of sessions changes
+    @Override
     public void onUpdate() {
         SessionList sessions = mTermSessions;
         if (sessions == null) {
@@ -1154,19 +1149,22 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
         PackageManager pm = getPackageManager();
         List<ResolveInfo> handlers = pm.queryIntentActivities(openLink, 0);
         if (handlers.size() > 0)
-            startActivity(openLink);
+        {startActivity(openLink);}
     }
 
     private TermSession createPyTermSession(String[] mArgs) throws IOException {
         Log.d("TermActivity", "createPyTermSession:" + mArgs);
         TermSettings settings = mSettings;
-        TermSession session;
+        TermSession session = null;
         Intent intent = this.getIntent();
-        String shell_type = intent.getStringExtra("shell_type");
-        if (shell_type!=null && shell_type.equals("shell")) {
+        String shell_type = intent.getStringExtra(TYPE);
+        if (shell_type!=null){
 
-            session = createTermSession(this, settings, "cd $HOME && cat SHELL", this.getFilesDir().getAbsolutePath());
-
+            if (shell_type.equals("shell"))
+                session = createTermSession(this, settings, settings.getShellInterface(), this.getFilesDir().getAbsolutePath());
+            else if (shell_type.equals("setup")) {
+                session = setup(settings);
+            }
         } else {
 
             if (mArgs == null) {
@@ -1181,7 +1179,7 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
                 } else {
                     StringBuilder cm = new StringBuilder();
                     for (int i = 0; i < mArgs.length; i++) {
-                        if (i == 1 && mArgs[0].contains(mArgs[i])) continue;
+                        if (i == 1 && mArgs[0].contains(mArgs[i])) {continue;}
                         cm.append(" ").append(mArgs[i]).append(" ");
                     }
                     session = createTermSession(this, settings, scmd + " " + cm + " && exit", mArgs[1]);
@@ -1198,21 +1196,27 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
     private String getScmd() {
         boolean isRootEnable = NAction.isRootEnable(this);
         String scmd;
-        if (Build.VERSION.SDK_INT >= 20) {
-            if (isRootEnable) {
-                scmd = getApplicationContext().getFilesDir() + "/bin/qpython" + (NAction.isQPy3(this) ? "3" : "") + "-android5-root.sh";
-            } else {
-                scmd = getApplicationContext().getFilesDir() + "/bin/qpython" + (NAction.isQPy3(this) ? "3" : "") + "-android5.sh";
-            }
-        } else {
+
             if (isRootEnable) {
                 scmd = getApplicationContext().getFilesDir() + "/bin/qpython" + (NAction.isQPy3(this) ? "3" : "") + "-root.sh";
             } else {
                 scmd = getApplicationContext().getFilesDir() + "/bin/qpython" + (NAction.isQPy3(this) ? "3" : "") + ".sh";
 
             }
-        }
+        //}
         return scmd;
+    }
+
+    private TermSession setup(TermSettings settings) throws IOException {
+        SharedPreferences.Editor pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit();
+        pref.putString("shell",getString(R.string.pref_shell_default)).apply();
+        String filesDir = this.getFilesDir().getAbsolutePath();
+        TermSession session = createTermSession(this, settings,
+                this.getApplicationInfo().nativeLibraryDir + "/lib-qpython3-setup.so setup && exit",
+                filesDir);
+        pref.putString("shell",filesDir+"/bin/bash").apply();
+        this.finish();
+        return session;
     }
 
     private String checkPath(String path) {
@@ -1238,14 +1242,14 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
         @Override
         public boolean onSingleTapUp(MotionEvent e) {
             // Let the EmulatorView handle taps if mouse tracking is active
-            if (view.isMouseTrackingActive()) return false;
+            if (view.isMouseTrackingActive()) {return false;}
 
             //Check for link at tap location
             String link = view.getURLat(e.getX(), e.getY());
             if (link != null)
-                execURL(link);
+            {execURL(link);}
             else
-                doUIToggle((int) e.getX(), (int) e.getY(), view.getVisibleWidth(), view.getVisibleHeight());
+            {doUIToggle((int) e.getX(), (int) e.getY(), view.getVisibleWidth(), view.getVisibleHeight());}
             return true;
         }
 

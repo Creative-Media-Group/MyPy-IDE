@@ -22,6 +22,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -347,7 +348,7 @@ public class NAction {
 
 		}
 		return "uid="+NAction.getUID(context)+"&token="+NAction.getToken(context)+"&userno="+NAction.getUserNoId(context)+"&lang="+NUtil.getLang()+
-				"&ver="+NUtil.getVersinoCode(context)+"&code="+NAction.getCode(context)+"&sdk="+sdk+"&appid="+context.getPackageName();
+				"&ver="+NUtil.getVersionCode(context)+"&code="+NAction.getCode(context)+"&sdk="+sdk+"&appid="+context.getPackageName();
 	}
 
 	// ftp
@@ -398,16 +399,24 @@ public class NAction {
 	}
 
 	public static boolean isQPyInterpreterSet(Context context) {
-		String qpyInterVal = NStorage.getSP(context, "conf.default_qpy_interpreter");
-		return !qpyInterVal.equals("");
+		byte[] b = new byte[64];
+		try {
+			(new FileInputStream(context.getFilesDir()+"/bin/python")).read(b);
+			return true;
+		} catch (IOException e) {
+			return false;
+		}
+		//String qpyInterVal = NStorage.getSP(context, "conf.default_qpy_interpreter");
+		//return !qpyInterVal.equals("");
 	}
 	public static String getQPyInterpreter(Context context) {
-		String qpyInterVal = NStorage.getSP(context, "conf.default_qpy_interpreter");
+		return "3.";
+		/*String qpyInterVal = NStorage.getSP(context, "conf.default_qpy_interpreter");
         if (!qpyInterVal.startsWith("3.")) {
         	qpyInterVal = "2.x";
         }
 
-        return qpyInterVal;
+        return qpyInterVal;*/
 	}
 
 	public static void setQPyInterpreter(Context context, String qpyInterVal) {
